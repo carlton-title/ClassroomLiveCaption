@@ -212,7 +212,7 @@ let syllableMode = false;
 
 let lastFinalText = "";
 
-const SILENCE_DELAY = 3000;
+const SILENCE_DELAY = 1000;
 
 const MIN_FONT_SIZE = 40;
 
@@ -1620,12 +1620,8 @@ else {
     */
 
     if (newlyFinalized.trim()) {
-
-      appendFinalSpeech(
-        newlyFinalized.trim()
-      );
-
-    }
+  restartSilenceTimer();
+}
 
 
     /*
