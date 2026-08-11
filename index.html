@@ -3,17 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Classroom Live Captions</title>
 
 <style>
-
 * {
   box-sizing: border-box;
 }
 
-html,
-body {
+html, body {
   margin: 0;
   width: 100%;
   height: 100%;
@@ -70,7 +67,6 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
   padding: 5vh 6vw;
   overflow: hidden;
 }
@@ -79,39 +75,30 @@ button:disabled {
   width: 100%;
   max-width: 1800px;
 
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  text-align: center;
 
   font-size: 72px;
   line-height: 1.18;
   font-weight: 800;
-  letter-spacing: 0.01em;
 
+  overflow: hidden;
+}
+
+#captionText {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+
+  overflow: hidden;
+
+  word-break: normal;
   overflow-wrap: anywhere;
+
+  transition: opacity 0.25s ease;
 }
 
-.line {
-  margin: 0.12em 0;
-  transition: opacity 0.5s ease;
-}
-
-.current {
-  opacity: 1;
-}
-
-.previous {
-  opacity: 0.55;
-}
-
-.interim {
-  opacity: 0.65;
-}
-
-#caption:empty::before {
-  content: "Press Start Listening";
-  color: #777;
+#captionText.interim {
+  opacity: 0.7;
 }
 
 #controls.hidden {
@@ -121,7 +108,6 @@ button:disabled {
 .error {
   color: #ff8a8a !important;
 }
-
 </style>
 </head>
 
@@ -170,7 +156,9 @@ button:disabled {
 
 <main id="captionArea">
 
-  <div id="caption" aria-live="polite"></div>
+  <div id="caption">
+    <div id="captionText"></div>
+  </div>
 
 </main>
 
@@ -184,8 +172,8 @@ button:disabled {
     window.webkitSpeechRecognition;
 
 
-  const caption =
-    document.getElementById("caption");
+  const captionText =
+    document.getElementById("captionText");
 
   const startBtn =
     document.getElementById("startBtn");
@@ -210,32 +198,32 @@ button:disabled {
 
   let listening = false;
 
-  let currentText = "";
 
-  let previousText = "";
+  /*
+    This is the important part.
 
-  let currentTimer = null;
+    We keep only a small rolling
+    collection of words.
 
-  let previousTimer = null;
+    The app NEVER builds a
+    permanent transcript.
+  */
+
+  let rollingWords = [];
 
 
   /*
-    HOW LONG CAPTIONS REMAIN VISIBLE
+    Approximately how many words
+    we allow in the rolling window.
 
-    Current sentence:
-    about 5.2 seconds.
+    CSS limits the actual display
+    to two lines.
 
-    Previous sentence:
-    about 2.5 additional seconds.
-
-    This gives students time to read
-    without allowing the screen to
-    become a transcript.
+    This gives the words enough
+    context to be understandable.
   */
 
-  const CURRENT_HOLD = 5200;
-
-  const PREVIOUS_HOLD = 2500;
+  const MAX_WORDS = 18;
 
 
   function setStatus(text, error = false) {
@@ -267,194 +255,104 @@ button:disabled {
 
 
   /*
-    Draw the screen.
-
-    There can NEVER be a long transcript here.
-
-    At most:
-
-    Previous phrase
-    Current phrase
-    Currently spoken words
+    Display only the newest words.
   */
 
-  function render(interimText = "") {
+  function render(words, interim = false) {
 
-    caption.innerHTML = "";
-
-
-    if (previousText) {
-
-      const previous =
-        document.createElement("div");
-
-      previous.className =
-        "line previous";
-
-      previous.innerHTML =
-        escapeHtml(previousText);
-
-      caption.appendChild(previous);
-
-    }
+    let allWords =
+      [...rollingWords, ...words];
 
 
-    if (currentText || interimText) {
+    /*
+      Keep only the newest words.
+    */
 
-      const current =
-        document.createElement("div");
+    if (allWords.length > MAX_WORDS) {
 
-      current.className =
-        "line current";
-
-
-      current.innerHTML =
-        escapeHtml(
-          currentText +
-          (
-            interimText
-              ? (currentText ? " " : "") +
-                interimText
-              : ""
-          )
+      allWords =
+        allWords.slice(
+          -MAX_WORDS
         );
 
-
-      caption.appendChild(current);
-
     }
+
+
+    captionText.textContent =
+      allWords.join(" ");
+
+
+    captionText.classList.toggle(
+      "interim",
+      interim
+    );
 
   }
 
 
   /*
-    Display a newly completed phrase.
+    Add finalized speech to
+    the rolling window.
   */
 
-  function showFinal(text) {
+  function addFinalSpeech(text) {
 
-    text = text.trim();
+    const words =
+      text
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
 
 
-    if (!text) {
+    if (!words.length) {
       return;
     }
 
 
-    if (currentTimer) {
-      clearTimeout(currentTimer);
-    }
-
-
-    if (previousTimer) {
-      clearTimeout(previousTimer);
-    }
+    rollingWords =
+      [
+        ...rollingWords,
+        ...words
+      ];
 
 
     /*
-      Move the old current phrase
-      into the previous position.
+      Immediately remove old words.
     */
 
-    previousText =
-      currentText;
+    if (
+      rollingWords.length >
+      MAX_WORDS
+    ) {
+
+      rollingWords =
+        rollingWords.slice(
+          -MAX_WORDS
+        );
+
+    }
 
 
-    currentText =
-      text;
-
-
-    render();
-
-
-    /*
-      After about 5 seconds,
-      remove the current phrase.
-    */
-
-    currentTimer =
-      setTimeout(() => {
-
-        if (currentText === text) {
-
-          previousText =
-            currentText;
-
-          currentText =
-            "";
-
-          render();
-
-
-          /*
-            Give the previous phrase
-            a little extra reading time.
-          */
-
-          previousTimer =
-            setTimeout(() => {
-
-              if (
-                currentText === "" &&
-                previousText === text
-              ) {
-
-                previousText =
-                  "";
-
-                render();
-
-              }
-
-            }, PREVIOUS_HOLD);
-
-        }
-
-      }, CURRENT_HOLD);
+    render([]);
 
   }
 
 
   /*
-    Font-size control
-  */
-
-  sizeSelect.addEventListener(
-    "change",
-    () => {
-
-      caption.style.fontSize =
-        sizeSelect.value + "px";
-
-    }
-  );
-
-
-  /*
-    Clear everything
+    Clear captions.
   */
 
   clearBtn.addEventListener(
     "click",
     () => {
 
-      currentText = "";
+      rollingWords = [];
 
-      previousText = "";
+      captionText.textContent = "";
 
-
-      if (currentTimer) {
-        clearTimeout(currentTimer);
-      }
-
-
-      if (previousTimer) {
-        clearTimeout(previousTimer);
-      }
-
-
-      render();
-
+      captionText.classList.remove(
+        "interim"
+      );
 
       setStatus(
         listening
@@ -467,7 +365,22 @@ button:disabled {
 
 
   /*
-    Full screen
+    Font size.
+  */
+
+  sizeSelect.addEventListener(
+    "change",
+    () => {
+
+      captionText.parentElement.style.fontSize =
+        sizeSelect.value + "px";
+
+    }
+  );
+
+
+  /*
+    Full screen.
   */
 
   fullscreenBtn.addEventListener(
@@ -497,7 +410,7 @@ button:disabled {
 
       }
 
-      catch (e) {
+      catch (error) {
 
         setStatus(
           "Full screen unavailable",
@@ -528,7 +441,7 @@ button:disabled {
 
 
   /*
-    Browser compatibility
+    Check browser support.
   */
 
   if (!SpeechRecognition) {
@@ -546,7 +459,7 @@ button:disabled {
 
 
   /*
-    Speech recognition
+    Speech recognition setup.
   */
 
   recognition =
@@ -569,6 +482,10 @@ button:disabled {
     1;
 
 
+  /*
+    Started.
+  */
+
   recognition.onstart =
     () => {
 
@@ -586,13 +503,13 @@ button:disabled {
 
 
   /*
-    Speech detected
+    New speech.
   */
 
   recognition.onresult =
     (event) => {
 
-      let interim = "";
+      let interimWords = [];
 
 
       for (
@@ -611,19 +528,16 @@ button:disabled {
           event.results[i].isFinal
         ) {
 
-          showFinal(text);
+          addFinalSpeech(text);
 
         }
 
         else {
 
-          interim +=
-            (
-              interim
-                ? " "
-                : ""
-            ) +
-            text;
+          interimWords =
+            text
+              .split(/\s+/)
+              .filter(Boolean);
 
         }
 
@@ -631,17 +545,22 @@ button:disabled {
 
 
       /*
-        Words currently being spoken
-        appear immediately.
+        Show currently spoken words
+        immediately, without permanently
+        adding them until Chrome finalizes
+        the speech.
       */
 
-      render(interim);
+      render(
+        interimWords,
+        interimWords.length > 0
+      );
 
     };
 
 
   /*
-    Errors
+    Errors.
   */
 
   recognition.onerror =
@@ -683,8 +602,10 @@ button:disabled {
 
 
   /*
-    Automatically restart recognition
-    if Chrome stops the recognition service.
+    Chrome sometimes ends recognition.
+
+    Restart automatically while
+    the teacher is still listening.
   */
 
   recognition.onend =
@@ -698,7 +619,7 @@ button:disabled {
 
         }
 
-        catch (e) {}
+        catch (error) {}
 
       }
 
@@ -720,7 +641,7 @@ button:disabled {
 
 
   /*
-    Start
+    Start.
   */
 
   startBtn.addEventListener(
@@ -735,7 +656,7 @@ button:disabled {
 
         }
 
-        catch (e) {
+        catch (error) {
 
           setStatus(
             "Could not start listening",
@@ -751,7 +672,7 @@ button:disabled {
 
 
   /*
-    Stop
+    Stop.
   */
 
   stopBtn.addEventListener(
@@ -760,21 +681,25 @@ button:disabled {
 
       listening = false;
 
-      if (recognition) {
-        recognition.stop();
-      }
+      recognition.stop();
 
-      render();
+      captionText.classList.remove(
+        "interim"
+      );
+
+      setStatus(
+        "Stopped"
+      );
 
     }
   );
 
 
   /*
-    Initial font size
+    Initial size.
   */
 
-  caption.style.fontSize =
+  captionText.parentElement.style.fontSize =
     sizeSelect.value + "px";
 
 })();
