@@ -74,7 +74,6 @@ button:disabled {
 #caption {
   width: 100%;
   max-width: 1800px;
-
   text-align: center;
 
   font-size: 72px;
@@ -85,20 +84,19 @@ button:disabled {
 }
 
 #captionText {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  width: 100%;
+  max-height: calc(2 * 1.18em);
 
   overflow: hidden;
 
   word-break: normal;
   overflow-wrap: anywhere;
 
-  transition: opacity 0.25s ease;
+  transition: opacity 0.12s ease;
 }
 
-#captionText.interim {
-  opacity: 0.7;
+.interim {
+  opacity: 0.72;
 }
 
 #controls.hidden {
@@ -147,9 +145,7 @@ button:disabled {
     px
   </label>
 
-  <span id="status">
-    Ready
-  </span>
+  <span id="status">Ready</span>
 
 </div>
 
@@ -171,6 +167,9 @@ button:disabled {
     window.SpeechRecognition ||
     window.webkitSpeechRecognition;
 
+
+  const caption =
+    document.getElementById("caption");
 
   const captionText =
     document.getElementById("captionText");
@@ -198,32 +197,20 @@ button:disabled {
 
   let listening = false;
 
-
   /*
-    This is the important part.
+    This contains ONLY the words
+    currently eligible to appear.
 
-    We keep only a small rolling
-    collection of words.
-
-    The app NEVER builds a
-    permanent transcript.
+    It is NOT a transcript.
   */
-
-  let rollingWords = [];
+  let words = [];
 
 
   /*
-    Approximately how many words
-    we allow in the rolling window.
-
-    CSS limits the actual display
-    to two lines.
-
-    This gives the words enough
-    context to be understandable.
+    Set this to true when Chrome gives
+    us speech that is still being spoken.
   */
-
-  const MAX_WORDS = 18;
+  let interimWords = [];
 
 
   function setStatus(text, error = false) {
@@ -236,123 +223,151 @@ button:disabled {
   }
 
 
-  function escapeHtml(text) {
+  /*
+    Put text into individual words.
+  */
+  function splitWords(text) {
 
-    return text.replace(
-      /[&<>"']/g,
-
-      c => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#039;"
-      }[c])
-
-    );
+    return text
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
 
   }
 
 
   /*
-    Display only the newest words.
+    The important function.
+
+    We physically measure the caption
+    on screen.
+
+    If it becomes more than TWO lines,
+    the oldest word is immediately
+    removed.
+
+    This continues until only two lines
+    remain.
   */
+  function fitToTwoLines() {
 
-  function render(words, interim = false) {
-
-    let allWords =
-      [...rollingWords, ...words];
-
-
-    /*
-      Keep only the newest words.
-    */
-
-    if (allWords.length > MAX_WORDS) {
-
-      allWords =
-        allWords.slice(
-          -MAX_WORDS
-        );
-
-    }
+    const combined =
+      [...words, ...interimWords];
 
 
     captionText.textContent =
-      allWords.join(" ");
+      combined.join(" ");
+
+
+    /*
+      Remove oldest words until the
+      rendered caption fits inside
+      exactly two lines.
+    */
+
+    while (
+      words.length > 0 &&
+      captionText.scrollHeight >
+      captionText.clientHeight
+    ) {
+
+      words.shift();
+
+      captionText.textContent =
+        [
+          ...words,
+          ...interimWords
+        ].join(" ");
+
+    }
+
+  }
+
+
+  /*
+    Render current speech.
+  */
+  function render() {
+
+    captionText.textContent =
+      [
+        ...words,
+        ...interimWords
+      ].join(" ");
+
+
+    fitToTwoLines();
 
 
     captionText.classList.toggle(
       "interim",
-      interim
+      interimWords.length > 0
     );
 
   }
 
 
   /*
-    Add finalized speech to
-    the rolling window.
+    Add FINAL speech.
+
+    Once Chrome confirms the words,
+    they enter the rolling caption.
   */
+  function addFinalText(text) {
 
-  function addFinalSpeech(text) {
-
-    const words =
-      text
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean);
+    const newWords =
+      splitWords(text);
 
 
-    if (!words.length) {
+    if (!newWords.length) {
       return;
     }
 
 
-    rollingWords =
-      [
-        ...rollingWords,
-        ...words
-      ];
+    words.push(...newWords);
 
 
     /*
-      Immediately remove old words.
+      Immediately fit the caption.
     */
-
-    if (
-      rollingWords.length >
-      MAX_WORDS
-    ) {
-
-      rollingWords =
-        rollingWords.slice(
-          -MAX_WORDS
-        );
-
-    }
-
-
-    render([]);
+    fitToTwoLines();
 
   }
 
 
   /*
-    Clear captions.
+    Font size.
   */
+  sizeSelect.addEventListener(
+    "change",
+    () => {
 
+      caption.style.fontSize =
+        sizeSelect.value + "px";
+
+
+      /*
+        Recalculate immediately after
+        changing font size.
+      */
+      fitToTwoLines();
+
+    }
+  );
+
+
+  /*
+    Clear.
+  */
   clearBtn.addEventListener(
     "click",
     () => {
 
-      rollingWords = [];
+      words = [];
+
+      interimWords = [];
 
       captionText.textContent = "";
-
-      captionText.classList.remove(
-        "interim"
-      );
 
       setStatus(
         listening
@@ -365,24 +380,8 @@ button:disabled {
 
 
   /*
-    Font size.
-  */
-
-  sizeSelect.addEventListener(
-    "change",
-    () => {
-
-      captionText.parentElement.style.fontSize =
-        sizeSelect.value + "px";
-
-    }
-  );
-
-
-  /*
     Full screen.
   */
-
   fullscreenBtn.addEventListener(
     "click",
     async () => {
@@ -400,17 +399,13 @@ button:disabled {
             .classList
             .add("hidden");
 
-        }
-
-        else {
+        } else {
 
           await document.exitFullscreen();
 
         }
 
-      }
-
-      catch (error) {
+      } catch (error) {
 
         setStatus(
           "Full screen unavailable",
@@ -443,7 +438,6 @@ button:disabled {
   /*
     Check browser support.
   */
-
   if (!SpeechRecognition) {
 
     setStatus(
@@ -459,9 +453,8 @@ button:disabled {
 
 
   /*
-    Speech recognition setup.
+    Speech recognition.
   */
-
   recognition =
     new SpeechRecognition();
 
@@ -483,9 +476,8 @@ button:disabled {
 
 
   /*
-    Started.
+    Listening started.
   */
-
   recognition.onstart =
     () => {
 
@@ -503,13 +495,12 @@ button:disabled {
 
 
   /*
-    New speech.
+    Speech results.
   */
-
   recognition.onresult =
     (event) => {
 
-      let interimWords = [];
+      interimWords = [];
 
 
       for (
@@ -528,16 +519,12 @@ button:disabled {
           event.results[i].isFinal
         ) {
 
-          addFinalSpeech(text);
+          addFinalText(text);
 
-        }
-
-        else {
+        } else {
 
           interimWords =
-            text
-              .split(/\s+/)
-              .filter(Boolean);
+            splitWords(text);
 
         }
 
@@ -545,16 +532,9 @@ button:disabled {
 
 
       /*
-        Show currently spoken words
-        immediately, without permanently
-        adding them until Chrome finalizes
-        the speech.
+        Display immediately.
       */
-
-      render(
-        interimWords,
-        interimWords.length > 0
-      );
+      render();
 
     };
 
@@ -562,7 +542,6 @@ button:disabled {
   /*
     Errors.
   */
-
   recognition.onerror =
     (event) => {
 
@@ -580,15 +559,12 @@ button:disabled {
 
         stopBtn.disabled = true;
 
-
         setStatus(
           "Microphone permission denied",
           true
         );
 
-      }
-
-      else {
+      } else {
 
         setStatus(
           "Recognition: " +
@@ -602,12 +578,9 @@ button:disabled {
 
 
   /*
-    Chrome sometimes ends recognition.
-
-    Restart automatically while
-    the teacher is still listening.
+    Automatically restart Chrome's
+    speech recognition when necessary.
   */
-
   recognition.onend =
     () => {
 
@@ -617,13 +590,9 @@ button:disabled {
 
           recognition.start();
 
-        }
+        } catch (error) {}
 
-        catch (error) {}
-
-      }
-
-      else {
+      } else {
 
         startBtn.disabled =
           false;
@@ -641,9 +610,8 @@ button:disabled {
 
 
   /*
-    Start.
+    Start button.
   */
-
   startBtn.addEventListener(
     "click",
     () => {
@@ -654,9 +622,7 @@ button:disabled {
 
           recognition.start();
 
-        }
-
-        catch (error) {
+        } catch (error) {
 
           setStatus(
             "Could not start listening",
@@ -672,35 +638,30 @@ button:disabled {
 
 
   /*
-    Stop.
+    Stop button.
   */
-
   stopBtn.addEventListener(
     "click",
     () => {
 
       listening = false;
 
+      interimWords = [];
+
       recognition.stop();
 
-      captionText.classList.remove(
-        "interim"
-      );
-
-      setStatus(
-        "Stopped"
-      );
+      render();
 
     }
   );
 
 
   /*
-    Initial size.
+    Initial font size.
   */
-
-  captionText.parentElement.style.fontSize =
+  caption.style.fontSize =
     sizeSelect.value + "px";
+
 
 })();
 
