@@ -1,1 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classroom Live Captions</title>
 
+<style>
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    color: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+    overflow: hidden;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  #controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #151515;
+    border-bottom: 1px solid #333;
+    flex-wrap: wrap;
+  }
+
+  button,
+  select {
+    font: inherit;
+    padding: 9px 14px;
+    border-radius: 7px;
+    border: 1px solid #555;
+    background: #252525;
+    color: #fff;
+    cursor: pointer;
+  }
+
+  button:hover,
+  select:hover {
+    background: #333;
+  }
+
+  button:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  #status {
+    color: #bbb;
+    font-size: 14px;
+    margin-left: auto;
+  }
+
+  #captionArea {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 5vh 6vw;
+    overflow: hidden;
+  }
+
+  #caption {
+    width: 100%;
+    max-width: 1800px;
+    min-height: 2.5em;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    font-size: 72px;
+    line-height: 1.18;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+
+    overflow-wrap: anywhere;
+  }
+
+  .line {
+    margin: 0.12em 0;
+    transition: opacity 0.35s ease;
+  }
+
+  .current {
+    opacity: 1;
+  }
+
+  .recent {
+    opacity: 0.88;
+  }
+
+  .interim {
+    opacity: 0.58;
+  }
+
+  .error {
+    color: #ff8a8a !important;
+  }
+
+  #caption:empty::before {
+    content: "Press Start Listening";
+    color: #777;
+  }
+
+  #controls.hidden {
+    display: none;
+  }
+</style>
+</head>
+
+<body>
+
+<div id="controls">
+
+  <button id="startBtn">
+    ▶ Start Listening
+  </button>
+
+  <button id="stopBtn" disabled>
+    ■ Stop
+  </button>
+
+  <button id="clearBtn">
+    Clear
+  </button>
+
+  <button id="fullscreenBtn">
+    ⛶ Full Screen
+  </button>
+
+  <label>
+    Size
+
+    <select id="sizeSelect">
+      <option value="48">48</option>
+      <option value="60">60</option>
+      <option value="72" selected>72</option>
+      <option value="90">90</option>
+      <option value="110">110</option>
+      <option value="140">140</option>
+      <option value="170">170</option>
+    </select>
+
+    px
+  </label>
+
+  <span id="status">
+    Ready
+  </span>
+
+</div>
+
+<main id="captionArea">
+  <div id="caption" aria-live="polite"></div>
+</main>
+
+
+<script>
+
+(() => {
+
+  const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+  const caption =
+    document.getElementById("caption");
+
+  const startBtn =
+    document.getElementById("startBtn");
+
+  const stopBtn =
+    document.getElementById("stopBtn");
+
+  const clearBtn =
+    document.getElementById("clearBtn");
+
+  const fullscreenBtn =
+    document.getElementById("fullscreenBtn");
+
+  const sizeSelect =
+    document.getElementById("sizeSelect");
+
+  const status =
+    document.getElementById("status");
+
+
+  let recognition = null;
+
+  let listening = false;
+
+  let segments = [];
+
+  let interim = "";
+
+  let removeTimer = null;
+
+
+  /*
+    CLASSROOM TIMING
+
+    Short phrases:
+    approximately 4 seconds.
+
+    Longer phrases:
+    stay longer.
+
+    Maximum:
+    approximately 9 seconds.
+  */
+
+  const MIN_DISPLAY_MS = 4000;
+
+  const MAX_DISPLAY_MS = 9000;
+
+  const MS_PER_WORD = 650;
+
+
+  /*
+    Only the newest two completed
+    phrases remain visible.
+  */
+
+  const MAX_VISIBLE_SEGMENTS = 2;
+
+
+  function setStatus(text, isError = false) {
+
+    status.textContent = text;
+
+    status.className =
+      isError ? "error" : "";
+
+  }
+
+
+  function escapeHtml(text) {
+
+    return text.replace(
+      /[&<>"']/g,
+
+      c => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[c])
+    );
+
+  }
+
+
+  function displayTime(text) {
+
+    const words =
+      text
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .length;
+
+    return Math.max(
+      MIN_DISPLAY_MS,
+
+      Math.min(
+        MAX_DISPLAY_MS,
+        words * MS_PER_WORD
+      )
+    );
+
+  }
+
+
+  function render() {
+
+    const visible =
+      segments.slice(
+        -MAX_VISIBLE_SEGMENTS
+      );
+
+    caption.innerHTML = "";
+
+
+    visible.forEach(
+      (segment, index) => {
+
+        const div =
+          document.createElement("div");
+
+        div.className =
+          "line " +
+          (
+            index === visible.length - 1
+              ? "current"
+              : "recent"
+          );
+
+        div.innerHTML =
+          escapeHtml(segment.text);
+
+        caption.appendChild(div);
+
+      }
+    );
+
+
+    /*
+      The words currently being spoken
+      are displayed more lightly.
+    */
+
+    if (interim) {
+
+      const div =
+        document.createElement("div");
+
+      div.className =
+        "line interim";
+
+      div.innerHTML =
+        escapeHtml(interim);
+
+      caption.appendChild(div);
+
+    }
+
+  }
+
+
+  function scheduleRemoval() {
+
+    if (removeTimer) {
+
+      clearTimeout(removeTimer);
+
+    }
+
+
+    if (!segments.length) {
+
+      return;
+
+    }
+
+
+    const delay =
+      Math.max(
+        250,
+        segments[0].expiresAt -
+        Date.now()
+      );
+
+
+    removeTimer =
+      setTimeout(() => {
+
+        const now =
+          Date.now();
+
+
+        segments =
+          segments.filter(
+            s => s.expiresAt > now
+          );
+
+
+        render();
+
+        scheduleRemoval();
+
+      }, delay);
+
+  }
+
+
+  function addFinalSegment(text) {
+
+    text =
+      text.trim();
+
+
+    if (!text) {
+
+      return;
+
+    }
+
+
+    segments.push({
+
+      text: text,
+
+      expiresAt:
+        Date.now() +
+        displayTime(text)
+
+    });
+
+
+    /*
+      Never allow the screen
+      to become a transcript.
+    */
+
+    if (
+      segments.length >
+      MAX_VISIBLE_SEGMENTS
+    ) {
+
+      segments =
+        segments.slice(
+          -MAX_VISIBLE_SEGMENTS
+        );
+
+    }
+
+
+    render();
+
+    scheduleRemoval();
+
+  }
+
+
+  /*
+    Font-size control
+  */
+
+  sizeSelect.addEventListener(
+    "change",
+    () => {
+
+      caption.style.fontSize =
+        sizeSelect.value + "px";
+
+    }
+  );
+
+
+  /*
+    Clear button
+  */
+
+  clearBtn.addEventListener(
+    "click",
+    () => {
+
+      segments = [];
+
+      interim = "";
+
+
+      if (removeTimer) {
+
+        clearTimeout(removeTimer);
+
+      }
+
+
+      render();
+
+
+      setStatus(
+        listening
+          ? "Listening…"
+          : "Ready"
+      );
+
+    }
+  );
+
+
+  /*
+    Full-screen button
+  */
+
+  fullscreenBtn.addEventListener(
+    "click",
+    async () => {
+
+      try {
+
+        if (!document.fullscreenElement) {
+
+          await document.documentElement
+            .requestFullscreen();
+
+          document
+            .getElementById("controls")
+            .classList
+            .add("hidden");
+
+        }
+
+        else {
+
+          await document.exitFullscreen();
+
+        }
+
+      }
+
+      catch (e) {
+
+        setStatus(
+          "Full screen unavailable",
+          true
+        );
+
+      }
+
+    }
+  );
+
+
+  document.addEventListener(
+    "fullscreenchange",
+    () => {
+
+      if (!document.fullscreenElement) {
+
+        document
+          .getElementById("controls")
+          .classList
+          .remove("hidden");
+
+      }
+
+    }
+  );
+
+
+  /*
+    Browser compatibility check
+  */
+
+  if (!SpeechRecognition) {
+
+    setStatus(
+      "Use Chrome or Edge for speech recognition",
+      true
+    );
+
+    startBtn.disabled = true;
+
+    return;
+
+  }
+
+
+  /*
+    Speech recognition setup
+  */
+
+  recognition =
+    new SpeechRecognition();
+
+
+  recognition.lang =
+    "en-US";
+
+
+  recognition.continuous =
+    true;
+
+
+  recognition.interimResults =
+    true;
+
+
+  recognition.maxAlternatives =
+    1;
+
+
+  /*
+    Recognition started
+  */
+
+  recognition.onstart =
+    () => {
+
+      listening = true;
+
+      startBtn.disabled = true;
+
+      stopBtn.disabled = false;
+
+      setStatus(
+        "Listening…"
+      );
+
+    };
+
+
+  /*
+    New speech recognized
+  */
+
+  recognition.onresult =
+    (event) => {
+
+      interim = "";
+
+
+      for (
+        let i = event.resultIndex;
+        i < event.results.length;
+        i++
+      ) {
+
+        const transcript =
+          event.results[i][0]
+            .transcript
+            .trim();
+
+
+        if (
+          event.results[i]
+            .isFinal
+        ) {
+
+          addFinalSegment(
+            transcript
+          );
+
+        }
+
+        else {
+
+          interim +=
+            (
+              interim
+                ? " "
+                : ""
+            ) +
+            transcript;
+
+        }
+
+      }
+
+
+      render();
+
+    };
+
+
+  /*
+    Recognition errors
+  */
+
+  recognition.onerror =
+    (event) => {
+
+      if (
+        event.error ===
+        "not-allowed" ||
+
+        event.error ===
+        "service-not-allowed"
+      ) {
+
+        setStatus(
+          "Microphone permission denied",
+          true
+        );
+
+
+        listening = false;
+
+        startBtn.disabled =
+          false;
+
+        stopBtn.disabled =
+          true;
+
+      }
+
+      else {
+
+        setStatus(
+          "Recognition: " +
+          event.error,
+
+          true
+        );
+
+      }
+
+    };
+
+
+  /*
+    Restart recognition automatically
+    if the browser stops listening.
+  */
+
+  recognition.onend =
+    () => {
+
+      if (listening) {
+
+        try {
+
+          recognition.start();
+
+        }
+
+        catch (e) {}
+
+      }
+
+      else {
+
+        startBtn.disabled =
+          false;
+
+        stopBtn.disabled =
+          true;
+
+        setStatus(
+          "Stopped"
+        );
+
+      }
+
+    };
+
+
+  /*
+    Start button
+  */
+
+  startBtn.addEventListener(
+    "click",
+    () => {
+
+      if (!listening) {
+
+        try {
+
+          recognition.start();
+
+        }
+
+        catch (e) {
+
+          setStatus(
+            "Could not start listening",
+            true
+          );
+
+        }
+
+      }
+
+    }
+  );
+
+
+  /*
+    Stop button
+  */
+
+  stopBtn.addEventListener(
+    "click",
+    () => {
+
+      listening = false;
+
+      interim = "";
+
+      recognition.stop();
+
+      render();
+
+    }
+  );
+
+
+  /*
+    Initial font size
+  */
+
+  caption.style.fontSize =
+    sizeSelect.value + "px";
+
+})();
+
+</script>
+
+</body>
+</html>
