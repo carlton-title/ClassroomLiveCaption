@@ -1,1240 +1,1476 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Classroom Live Caption</title>
+<title>Classroom Live Caption</title>
 
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+<style>
+* {
+  box-sizing: border-box;
+}
 
-    html,
-    body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      background: #000;
-      color: #fff;
-      font-family: Arial, Helvetica, sans-serif;
-      overflow: hidden;
-    }
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  color: #fff;
+  font-family: Arial, Helvetica, sans-serif;
+  overflow: hidden;
+}
 
-    body {
-      display: flex;
-      flex-direction: column;
-    }
+body {
+  display: flex;
+  flex-direction: column;
+}
 
-    #controls {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
-      background: #151515;
-      border-bottom: 1px solid #333;
-      flex-wrap: wrap;
-    }
+#controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #151515;
+  border-bottom: 1px solid #333;
+  flex-wrap: wrap;
+}
 
-    button,
-    select {
-      font-family: inherit;
-      font-size: 15px;
-      padding: 9px 13px;
-      border-radius: 7px;
-      border: 1px solid #555;
-      background: #252525;
-      color: #fff;
-      cursor: pointer;
-    }
+button,
+select {
+  font-family: inherit;
+  font-size: 15px;
+  padding: 9px 13px;
+  border-radius: 7px;
+  border: 1px solid #555;
+  background: #252525;
+  color: #fff;
+  cursor: pointer;
+}
 
-    button:hover,
-    select:hover {
-      background: #333;
-    }
+button:hover,
+select:hover {
+  background: #333;
+}
 
-    button:disabled {
-      opacity: 0.45;
-      cursor: default;
-    }
+button:disabled {
+  opacity: .45;
+  cursor: default;
+}
 
-    #status {
-      margin-left: auto;
-      color: #aaa;
-      font-size: 14px;
-    }
+#status {
+  margin-left: auto;
+  color: #aaa;
+  font-size: 14px;
+}
 
-    .error {
-      color: #ff8585 !important;
-    }
+#captionArea {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4vh 6vw;
+  overflow: hidden;
+}
 
-    #captionArea {
-      flex: 1;
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 4vh 6vw;
-      overflow: hidden;
-    }
+#caption {
+  width: 100%;
+  max-width: 1800px;
+  text-align: center;
+  font-size: 90px;
+  line-height: 1.15;
+  font-weight: 700;
+  overflow: hidden;
+}
 
-    /*
-      The caption is allowed to use up to
-      four lines.
+#captionText {
+  width: 100%;
+  max-height: 4.6em;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  transition: opacity .25s ease;
+}
 
-      The JavaScript automatically changes
-      the font size when necessary.
-    */
+#captionText.interim {
+  opacity: .78;
+}
 
-    #caption {
-      width: 100%;
-      max-width: 1800px;
+#captionText.hidden {
+  opacity: 0;
+}
 
-      text-align: center;
-
-      font-size: 90px;
-      line-height: 1.15;
-      font-weight: 700;
-
-      overflow: hidden;
-    }
-
-    #captionText {
-      width: 100%;
-
-      max-height: 4.6em;
-
-      overflow: hidden;
-
-      overflow-wrap: anywhere;
-
-      word-break: normal;
-
-      opacity: 1;
-
-      transition:
-        opacity 0.25s ease,
-        font-size 0.15s ease;
-    }
-
-    #captionText.interim {
-      opacity: 0.78;
-    }
-
-    #captionText.hidden {
-      opacity: 0;
-    }
-
-    #controls.hidden {
-      display: none;
-    }
-  </style>
+#controls.hidden {
+  display: none;
+}
+</style>
 </head>
 
 <body>
 
-  <div id="controls">
+<div id="controls">
 
-    <button id="startBtn">
-      ▶ Start Listening
-    </button>
+  <button id="startBtn">
+    ▶ Start Listening
+  </button>
 
-    <button id="stopBtn" disabled>
-      ■ Stop
-    </button>
+  <button id="stopBtn" disabled>
+    ■ Stop
+  </button>
 
-    <button id="clearBtn">
-      Clear
-    </button>
+  <button id="clearBtn">
+    Clear
+  </button>
 
-    <button id="fullscreenBtn">
-      ⛶ Full Screen
-    </button>
+  <button id="fullscreenBtn">
+    ⛶ Full Screen
+  </button>
 
-    <label>
-      Size:
+  <label>
+    Size:
+    <select id="sizeSelect">
+      <option value="60">60</option>
+      <option value="72">72</option>
+      <option value="80">80</option>
+      <option value="90" selected>90</option>
+      <option value="100">100</option>
+      <option value="110">110</option>
+      <option value="120">120</option>
+    </select>
+    px
+  </label>
 
-      <select id="sizeSelect">
-        <option value="60">60</option>
-        <option value="72">72</option>
-        <option value="80">80</option>
-        <option value="90" selected>90</option>
-        <option value="100">100</option>
-        <option value="110">110</option>
-        <option value="120">120</option>
-      </select>
+  <label>
+    Language:
+    <select id="languageMode">
+      <option value="en-US">English</option>
+      <option value="th-TH">ไทย</option>
+    </select>
+  </label>
 
-      px
-    </label>
+  <span id="status">Ready</span>
 
-    <label>
-      Language:
+</div>
 
-      <select id="languageMode">
-        <option value="en-US">English</option>
-        <option value="th-TH">ไทย</option>
-      </select>
-    </label>
 
-    <span id="status">
-      Ready
-    </span>
+<main id="captionArea">
 
+  <div id="caption">
+    <div id="captionText"></div>
   </div>
 
-
-  <main id="captionArea">
-
-    <div id="caption">
-
-      <div id="captionText"></div>
-
-    </div>
-
-  </main>
+</main>
 
 
-  <script>
+<script>
 
-    /*
-      =========================================
-      CLASSROOM LIVE CAPTION ENGINE
-      =========================================
-    */
+/* =====================================================
+   CLASSROOM LIVE CAPTION ENGINE
+   ===================================================== */
 
-
-    const SpeechRecognition =
-      window.SpeechRecognition ||
-      window.webkitSpeechRecognition;
+const SpeechRecognition =
+  window.SpeechRecognition ||
+  window.webkitSpeechRecognition;
 
 
-    const caption =
-      document.getElementById("caption");
+/* DOM */
 
-    const captionText =
-      document.getElementById("captionText");
+const caption =
+  document.getElementById("caption");
 
-    const startBtn =
-      document.getElementById("startBtn");
+const captionText =
+  document.getElementById("captionText");
 
-    const stopBtn =
-      document.getElementById("stopBtn");
+const startBtn =
+  document.getElementById("startBtn");
 
-    const clearBtn =
-      document.getElementById("clearBtn");
+const stopBtn =
+  document.getElementById("stopBtn");
 
-    const fullscreenBtn =
-      document.getElementById("fullscreenBtn");
+const clearBtn =
+  document.getElementById("clearBtn");
 
-    const sizeSelect =
-      document.getElementById("sizeSelect");
+const fullscreenBtn =
+  document.getElementById("fullscreenBtn");
 
-    const languageMode =
-      document.getElementById("languageMode");
+const sizeSelect =
+  document.getElementById("sizeSelect");
 
-    const status =
-      document.getElementById("status");
+const languageMode =
+  document.getElementById("languageMode");
 
-
-    /*
-      =========================================
-      APPLICATION STATE
-      =========================================
-    */
-
-    let recognition = null;
-
-    let listening = false;
-
-    let finalText = "";
-
-    let interimText = "";
-
-    let silenceTimer = null;
-
-    let currentFontSize = 90;
+const status =
+  document.getElementById("status");
 
 
-    /*
-      Three seconds of silence before
-      the caption disappears.
-    */
+/* =====================================================
+   STATE
+   ===================================================== */
 
-    const SILENCE_DELAY = 3000;
+let recognition = null;
 
+let listening = false;
 
-    /*
-      Maximum number of visible lines.
-    */
+let finalText = "";
 
-    const MAX_LINES = 4;
+let interimText = "";
 
+let silenceTimer = null;
 
-    /*
-      Minimum font size.
-
-      The application can shrink the
-      text to this size if necessary.
-    */
-
-    const MIN_FONT_SIZE = 42;
+let currentFontSize = 90;
 
 
-    /*
-      =========================================
-      STATUS
-      =========================================
-    */
+/*
+   Maximum visible lines.
+*/
+const MAX_LINES = 4;
 
-    function setStatus(
-      message,
-      error = false
+
+/*
+   Caption disappears three seconds
+   after speech stops.
+*/
+const SILENCE_DELAY = 3000;
+
+
+/*
+   Smallest automatic font size.
+*/
+const MIN_FONT_SIZE = 42;
+
+
+/*
+   =====================================================
+   FILLER WORDS
+   =====================================================
+*/
+
+const fillerPattern =
+  /\b(um+|uh+|erm+|hmm+)\b/gi;
+
+
+/*
+   =====================================================
+   PUNCTUATION COMMANDS
+   =====================================================
+*/
+
+function convertPunctuation(text) {
+
+  if (!text) return "";
+
+  let result = text;
+
+  result = result.replace(
+    /\bquestion mark\b/gi,
+    "?"
+  );
+
+  result = result.replace(
+    /\bexclamation mark\b/gi,
+    "!"
+  );
+
+  result = result.replace(
+    /\bexclamation point\b/gi,
+    "!"
+  );
+
+  result = result.replace(
+    /\bcomma\b/gi,
+    ","
+  );
+
+  result = result.replace(
+    /\bcolon\b/gi,
+    ":"
+  );
+
+  result = result.replace(
+    /\bsemicolon\b/gi,
+    ";"
+  );
+
+  result = result.replace(
+    /\bhyphen\b/gi,
+    "-"
+  );
+
+  result = result.replace(
+    /\bdash\b/gi,
+    "—"
+  );
+
+  result = result.replace(
+    /\bperiod\b/gi,
+    "."
+  );
+
+  result = result.replace(
+    /\bfull stop\b/gi,
+    "."
+  );
+
+  return result;
+}
+
+
+/*
+   =====================================================
+   NUMBER CONVERSION
+   =====================================================
+*/
+
+const numberWords = {
+  zero: "0",
+  one: "1",
+  two: "2",
+  three: "3",
+  four: "4",
+  five: "5",
+  six: "6",
+  seven: "7",
+  eight: "8",
+  nine: "9",
+  ten: "10",
+  eleven: "11",
+  twelve: "12",
+  thirteen: "13",
+  fourteen: "14",
+  fifteen: "15",
+  sixteen: "16",
+  seventeen: "17",
+  eighteen: "18",
+  nineteen: "19",
+  twenty: "20"
+};
+
+
+function convertNumbers(text) {
+
+  if (!text) return "";
+
+  return text.replace(
+    /\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)\b/gi,
+    word => numberWords[word.toLowerCase()]
+  );
+}
+
+
+/*
+   =====================================================
+   LETTER DETECTION
+   =====================================================
+
+   Detect sequences such as:
+
+   A E I O U
+
+   C A T
+
+   T H E M S E L V E S
+
+   Chrome may return these as separate
+   words, so we inspect the entire phrase.
+   =====================================================
+*/
+
+const letterWords = {
+  a: "A",
+  ay: "A",
+
+  b: "B",
+  bee: "B",
+
+  c: "C",
+  see: "C",
+
+  d: "D",
+  dee: "D",
+
+  e: "E",
+
+  f: "F",
+  ef: "F",
+
+  g: "G",
+  gee: "G",
+
+  h: "H",
+  aitch: "H",
+
+  i: "I",
+  eye: "I",
+
+  j: "J",
+  jay: "J",
+
+  k: "K",
+  kay: "K",
+
+  l: "L",
+  el: "L",
+
+  m: "M",
+  em: "M",
+
+  n: "N",
+  en: "N",
+
+  o: "O",
+
+  p: "P",
+  pee: "P",
+
+  q: "Q",
+  cue: "Q",
+
+  r: "R",
+  are: "R",
+
+  s: "S",
+  ess: "S",
+
+  t: "T",
+  tea: "T",
+
+  u: "U",
+  you: "U",
+
+  v: "V",
+  vee: "V",
+
+  w: "W",
+  doubleyou: "W",
+
+  x: "X",
+  ex: "X",
+
+  y: "Y",
+  why: "Y",
+
+  z: "Z",
+  zee: "Z",
+  zed: "Z"
+};
+
+
+/*
+   Convert a sequence of individual
+   letter names into letters.
+
+   Example:
+
+   "a e i o u"
+
+   becomes:
+
+   "A, E, I, O, U"
+*/
+
+function detectLetterSequence(text) {
+
+  if (!text) return null;
+
+  const words =
+    text
+      .trim()
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean);
+
+  if (words.length < 2) {
+    return null;
+  }
+
+  const converted = [];
+
+  for (const word of words) {
+
+    const clean =
+      word.replace(
+        /[^a-z]/g,
+        ""
+      );
+
+    if (
+      !letterWords[clean]
+    ) {
+      return null;
+    }
+
+    converted.push(
+      letterWords[clean]
+    );
+  }
+
+  return converted.join(", ");
+}
+
+
+/*
+   =====================================================
+   EXPLICIT SPELLING DETECTION
+   =====================================================
+*/
+
+function convertSpellingSequence(text) {
+
+  if (!text) return text;
+
+  /*
+     Already hyphenated spelling:
+
+     T-H-E-M-S-E-L-V-E-S
+
+     is preserved.
+  */
+
+  if (
+    /^[A-Za-z](?:-[A-Za-z])+$/.
+    test(text.trim())
+  ) {
+
+    return text.toUpperCase();
+
+  }
+
+
+  /*
+     Individual letters:
+
+     T H E M S E L V E S
+
+     become:
+
+     T-H-E-M-S-E-L-V-E-S
+  */
+
+  const words =
+    text
+      .trim()
+      .split(/\s+/);
+
+  if (
+    words.length >= 2 &&
+    words.every(word =>
+      /^[A-Za-z]$/.test(word)
+    )
+  ) {
+
+    return words
+      .map(word =>
+        word.toUpperCase()
+      )
+      .join("-");
+
+  }
+
+  return text;
+}
+
+
+/*
+   =====================================================
+   REPEATED WORD CLEANUP
+   =====================================================
+*/
+
+function removeAccidentalRepeats(text) {
+
+  if (!text) return "";
+
+  const words =
+    text.split(/\s+/);
+
+  const output = [];
+
+  for (
+    let i = 0;
+    i < words.length;
+    i++
+  ) {
+
+    const current =
+      words[i];
+
+    const previous =
+      output[output.length - 1];
+
+    if (
+      previous &&
+      current
+        .toLowerCase()
+        .replace(/[.,!?]/g, "") ===
+
+      previous
+        .toLowerCase()
+        .replace(/[.,!?]/g, "")
     ) {
 
-      status.textContent = message;
-
-      status.classList.toggle(
-        "error",
-        error
-      );
-
+      continue;
     }
 
+    output.push(current);
+  }
 
-    /*
-      =========================================
-      FILLER CLEANUP
-      =========================================
+  return output.join(" ");
+}
 
-      Remove common speech fillers.
 
-      We intentionally do NOT remove
-      ordinary words such as "so",
-      because "so" can be meaningful.
-    */
+/*
+   =====================================================
+   TEXT CLEANUP
+   =====================================================
+*/
 
-    function removeFillers(text) {
+function cleanText(text) {
 
-      if (!text) {
-        return "";
-      }
+  if (!text) return "";
 
-      return text
-        .replace(
-          /\b(um+|uh+|erm+|hmm+)\b/gi,
-          ""
-        )
-        .replace(
-          /\s{2,}/g,
-          " "
-        )
-        .trim();
+  let result = text;
 
-    }
 
+  /*
+     Remove fillers.
+  */
 
-    /*
-      =========================================
-      REPEATED WORD CLEANUP
-      =========================================
-
-      "I I I I think..."
-
-      becomes:
-
-      "I think..."
-
-      But intentional repetition inside
-      a meaningful phrase is preserved as
-      much as possible.
-    */
-
-    function removeAccidentalRepeats(text) {
-
-      if (!text) {
-        return "";
-      }
-
-      const words =
-        text.split(/\s+/);
-
-      const result = [];
-
-      for (
-        let i = 0;
-        i < words.length;
-        i++
-      ) {
-
-        const current =
-          words[i];
-
-        const previous =
-          result[result.length - 1];
-
-
-        if (
-          previous &&
-          current.toLowerCase()
-            .replace(/[.,!?]/g, "") ===
-          previous.toLowerCase()
-            .replace(/[.,!?]/g, "")
-        ) {
-
-          continue;
-
-        }
-
-        result.push(current);
-
-      }
-
-      return result.join(" ");
-
-    }
-
-
-    /*
-      =========================================
-      BASIC TEXT CLEANUP
-      =========================================
-    */
-
-    function cleanText(text) {
-
-      let cleaned =
-        removeFillers(text);
-
-      cleaned =
-        removeAccidentalRepeats(cleaned);
-
-      return cleaned.trim();
-
-    }
-
-
-    /*
-      =========================================
-      SPELLING PRESERVATION
-      =========================================
-
-      If speech recognition gives us:
-
-      T-H-E-M-S-E-L-V-E-S
-
-      we preserve it.
-
-      We do NOT automatically turn it
-      into "themselves".
-
-      This allows a future language
-      processor to distinguish between
-      normal words and deliberate spelling.
-    */
-
-    function isSpelledWord(text) {
-
-      return /^[A-Za-z](?:-[A-Za-z])+$/.
-        test(text.trim());
-
-    }
-
-
-    /*
-      =========================================
-      NUMBER NORMALIZATION
-      =========================================
-
-      Convert common spoken number words
-      into numerical forms.
-
-      This is intentionally conservative.
-    */
-
-    function normalizeNumbers(text) {
-
-      if (!text) {
-        return "";
-      }
-
-      const numbers = {
-
-        "zero": "0",
-        "one": "1",
-        "two": "2",
-        "three": "3",
-        "four": "4",
-        "five": "5",
-        "six": "6",
-        "seven": "7",
-        "eight": "8",
-        "nine": "9",
-        "ten": "10",
-        "eleven": "11",
-        "twelve": "12",
-        "thirteen": "13",
-        "fourteen": "14",
-        "fifteen": "15",
-        "sixteen": "16",
-        "seventeen": "17",
-        "eighteen": "18",
-        "nineteen": "19",
-        "twenty": "20"
-      };
-
-
-      return text.replace(
-        /\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty)\b/gi,
-        match =>
-          numbers[
-            match.toLowerCase()
-          ]
-      );
-
-    }
-
-
-    /*
-      =========================================
-      PREPARE RECOGNIZED TEXT
-      =========================================
-    */
-
-    function prepareText(text) {
-
-      let result =
-        cleanText(text);
-
-      /*
-        Preserve deliberately spelled words.
-        Number conversion happens only for
-        ordinary recognized number words.
-      */
-
-      const tokens =
-        result.split(/\s+/);
-
-      result =
-        tokens.map(token => {
-
-          if (
-            isSpelledWord(token)
-          ) {
-
-            return token;
-
-          }
-
-          return token;
-
-        }).join(" ");
-
-
-      result =
-        normalizeNumbers(result);
-
-      return result;
-
-    }
-
-
-    /*
-      =========================================
-      SILENCE TIMER
-      =========================================
-    */
-
-    function cancelSilenceTimer() {
-
-      if (
-        silenceTimer !== null
-      ) {
-
-        clearTimeout(
-          silenceTimer
-        );
-
-        silenceTimer = null;
-
-      }
-
-    }
-
-
-    function startSilenceTimer() {
-
-      cancelSilenceTimer();
-
-
-      silenceTimer =
-        setTimeout(
-          () => {
-
-            finalText = "";
-
-            interimText = "";
-
-            captionText.textContent =
-              "";
-
-            captionText.classList.add(
-              "hidden"
-            );
-
-            silenceTimer = null;
-
-          },
-
-          SILENCE_DELAY
-        );
-
-    }
-
-
-    /*
-      =========================================
-      FONT SIZE / MULTI-LINE FITTING
-      =========================================
-
-      Start at the user's chosen size.
-
-      If the text needs more than four
-      lines, gradually reduce the font.
-
-      This means the application tries
-      to preserve the complete thought
-      instead of throwing old words away.
-    */
-
-    function fitCaption() {
-
-      if (
-        !captionText.textContent.trim()
-      ) {
-
-        return;
-
-      }
-
-
-      let fontSize =
-        currentFontSize;
-
-
-      caption.style.fontSize =
-        fontSize + "px";
-
-
-      /*
-        Reduce size until the caption
-        fits within four lines.
-      */
-
-      while (
-
-        captionText.scrollHeight >
-        captionText.clientHeight &&
-
-        fontSize >
-        MIN_FONT_SIZE
-
-      ) {
-
-        fontSize -= 2;
-
-        caption.style.fontSize =
-          fontSize + "px";
-
-      }
-
-
-      currentFontSize =
-        fontSize;
-
-    }
-
-
-    /*
-      =========================================
-      RENDER
-      =========================================
-    */
-
-    function renderCaption() {
-
-      const displayText =
-        [
-          finalText,
-          interimText
-        ]
-        .filter(Boolean)
-        .join(" ");
-
-
-      if (!displayText) {
-
-        captionText.textContent =
-          "";
-
-        captionText.classList.add(
-          "hidden"
-        );
-
-        return;
-
-      }
-
-
-      captionText.textContent =
-        displayText;
-
-
-      captionText.classList.remove(
-        "hidden"
-      );
-
-
-      captionText.classList.toggle(
-        "interim",
-        Boolean(interimText)
-      );
-
-
-      /*
-        Reset to the user's preferred
-        size whenever a fresh caption
-        arrives, then shrink only if
-        necessary.
-      */
-
-      currentFontSize =
-        Number(
-          sizeSelect.value
-        );
-
-
-      caption.style.fontSize =
-        currentFontSize + "px";
-
-
-      fitCaption();
-
-    }
-
-
-    /*
-      =========================================
-      FONT SIZE CONTROL
-      =========================================
-    */
-
-    sizeSelect.addEventListener(
-      "change",
-      () => {
-
-        currentFontSize =
-          Number(
-            sizeSelect.value
-          );
-
-        caption.style.fontSize =
-          currentFontSize + "px";
-
-        fitCaption();
-
-      }
+  result =
+    result.replace(
+      fillerPattern,
+      ""
     );
 
 
-    /*
-      =========================================
-      CLEAR BUTTON
-      =========================================
-    */
+  /*
+     Remove obvious accidental
+     repetitions.
+  */
 
-    clearBtn.addEventListener(
-      "click",
+  result =
+    removeAccidentalRepeats(
+      result
+    );
+
+
+  /*
+     Convert punctuation commands.
+  */
+
+  result =
+    convertPunctuation(
+      result
+    );
+
+
+  /*
+     Normalize numbers.
+  */
+
+  result =
+    convertNumbers(
+      result
+    );
+
+
+  /*
+     Clean extra spaces.
+  */
+
+  result =
+    result
+      .replace(/\s+([,.!?;:])/g, "$1")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+
+
+  return result;
+}
+
+
+/*
+   =====================================================
+   SMART PROCESSOR
+   =====================================================
+*/
+
+function processSpeech(text) {
+
+  if (!text) return "";
+
+  const original =
+    text.trim();
+
+
+  /*
+     First check for a sequence
+     of letters.
+
+     This is particularly important
+     for classroom examples such as:
+
+     "A E I O U"
+  */
+
+  const letters =
+    detectLetterSequence(
+      original
+    );
+
+
+  if (letters) {
+
+    return letters;
+
+  }
+
+
+  /*
+     Next check for deliberate
+     spelling.
+  */
+
+  const spelling =
+    convertSpellingSequence(
+      original
+    );
+
+
+  if (
+    spelling !== original
+  ) {
+
+    return spelling;
+
+  }
+
+
+  /*
+     Otherwise process ordinary
+     classroom speech.
+  */
+
+  return cleanText(
+    original
+  );
+}
+
+
+/*
+   =====================================================
+   CAPTION DISPLAY
+   =====================================================
+*/
+
+function showCaption() {
+
+  captionText.classList.remove(
+    "hidden"
+  );
+
+}
+
+
+function hideCaption() {
+
+  captionText.classList.add(
+    "hidden"
+  );
+
+}
+
+
+/*
+   =====================================================
+   SILENCE TIMER
+   =====================================================
+*/
+
+function cancelSilenceTimer() {
+
+  if (
+    silenceTimer !== null
+  ) {
+
+    clearTimeout(
+      silenceTimer
+    );
+
+    silenceTimer = null;
+
+  }
+
+}
+
+
+function startSilenceTimer() {
+
+  cancelSilenceTimer();
+
+  silenceTimer =
+    setTimeout(
       () => {
 
         finalText = "";
 
         interimText = "";
 
-        cancelSilenceTimer();
-
         captionText.textContent =
           "";
 
-        captionText.classList.add(
-          "hidden"
-        );
+        hideCaption();
 
-        currentFontSize =
-          Number(
-            sizeSelect.value
-          );
+        silenceTimer =
+          null;
 
-        setStatus(
-          listening
-            ? "Listening…"
-            : "Ready"
-        );
+      },
+      SILENCE_DELAY
+    );
 
-      }
+}
+
+
+/*
+   =====================================================
+   ADAPTIVE FONT SIZE
+   =====================================================
+
+   The caption can use up to four
+   lines.
+
+   Instead of deleting words when
+   the sentence becomes longer,
+   the font becomes smaller.
+   =====================================================
+*/
+
+function fitCaption() {
+
+  if (
+    !captionText.textContent.trim()
+  ) {
+
+    return;
+
+  }
+
+
+  let fontSize =
+    Number(
+      sizeSelect.value
     );
 
 
-    /*
-      =========================================
-      FULL SCREEN
-      =========================================
-    */
+  caption.style.fontSize =
+    fontSize + "px";
 
-    fullscreenBtn.addEventListener(
-      "click",
-      async () => {
+
+  while (
+
+    captionText.scrollHeight >
+    captionText.clientHeight &&
+
+    fontSize >
+    MIN_FONT_SIZE
+
+  ) {
+
+    fontSize -= 2;
+
+    caption.style.fontSize =
+      fontSize + "px";
+
+  }
+
+
+  currentFontSize =
+    fontSize;
+
+}
+
+
+/*
+   =====================================================
+   RENDER
+   =====================================================
+*/
+
+function renderCaption() {
+
+  const combined =
+    [
+      finalText,
+      interimText
+    ]
+    .filter(Boolean)
+    .join(" ");
+
+
+  if (!combined) {
+
+    captionText.textContent =
+      "";
+
+    hideCaption();
+
+    return;
+
+  }
+
+
+  captionText.textContent =
+    combined;
+
+
+  showCaption();
+
+
+  captionText.classList.toggle(
+    "interim",
+    Boolean(interimText)
+  );
+
+
+  fitCaption();
+
+}
+
+
+/*
+   =====================================================
+   FONT SIZE CONTROL
+   =====================================================
+*/
+
+sizeSelect.addEventListener(
+  "change",
+  () => {
+
+    currentFontSize =
+      Number(
+        sizeSelect.value
+      );
+
+    caption.style.fontSize =
+      currentFontSize + "px";
+
+    fitCaption();
+
+  }
+);
+
+
+/*
+   =====================================================
+   CLEAR
+   =====================================================
+*/
+
+clearBtn.addEventListener(
+  "click",
+  () => {
+
+    finalText = "";
+
+    interimText = "";
+
+    cancelSilenceTimer();
+
+    captionText.textContent =
+      "";
+
+    hideCaption();
+
+    setStatus(
+      listening
+        ? "Listening…"
+        : "Ready"
+    );
+
+  }
+);
+
+
+/*
+   =====================================================
+   FULL SCREEN
+   =====================================================
+*/
+
+fullscreenBtn.addEventListener(
+  "click",
+  async () => {
+
+    try {
+
+      if (
+        !document.fullscreenElement
+      ) {
+
+        await
+          document.documentElement
+            .requestFullscreen();
+
+        document
+          .getElementById(
+            "controls"
+          )
+          .classList
+          .add("hidden");
+
+      }
+
+      else {
+
+        await
+          document.exitFullscreen();
+
+      }
+
+    }
+
+    catch (error) {
+
+      setStatus(
+        "Full screen unavailable"
+      );
+
+    }
+
+  }
+);
+
+
+document.addEventListener(
+  "fullscreenchange",
+  () => {
+
+    if (
+      !document.fullscreenElement
+    ) {
+
+      document
+        .getElementById(
+          "controls"
+        )
+        .classList
+        .remove("hidden");
+
+    }
+
+  }
+);
+
+
+/*
+   =====================================================
+   STATUS
+   =====================================================
+*/
+
+function setStatus(message) {
+
+  status.textContent =
+    message;
+
+}
+
+
+/*
+   =====================================================
+   SPEECH RECOGNITION
+   =====================================================
+*/
+
+if (!SpeechRecognition) {
+
+  setStatus(
+    "Chrome speech recognition is required."
+  );
+
+  startBtn.disabled =
+    true;
+
+}
+
+else {
+
+  recognition =
+    new SpeechRecognition();
+
+
+  recognition.continuous =
+    true;
+
+
+  recognition.interimResults =
+    true;
+
+
+  /*
+     Multiple alternatives give the
+     browser more opportunities to
+     recognize ambiguous speech.
+  */
+
+  recognition.maxAlternatives =
+    3;
+
+
+  function updateLanguage() {
+
+    recognition.lang =
+      languageMode.value;
+
+  }
+
+
+  updateLanguage();
+
+
+  languageMode.addEventListener(
+    "change",
+    () => {
+
+      updateLanguage();
+
+      if (listening) {
 
         try {
 
-          if (
-            !document.fullscreenElement
-          ) {
+          recognition.stop();
 
-            await
-              document.documentElement
-                .requestFullscreen();
+        }
+
+        catch (error) {}
+
+      }
+
+    }
+  );
 
 
-            document
-              .getElementById("controls")
-              .classList
-              .add("hidden");
+  /*
+     ==================================================
+     RECOGNITION START
+     ==================================================
+  */
 
-          }
+  recognition.onstart =
+    () => {
 
-          else {
+      listening = true;
 
-            await
-              document.exitFullscreen();
+      startBtn.disabled =
+        true;
 
-          }
+      stopBtn.disabled =
+        false;
+
+      setStatus(
+        "Listening…"
+      );
+
+    };
+
+
+  /*
+     ==================================================
+     SPEECH RESULT
+     ==================================================
+  */
+
+  recognition.onresult =
+    event => {
+
+      /*
+         New speech means the caption
+         should stay visible.
+      */
+
+      cancelSilenceTimer();
+
+
+      interimText = "";
+
+
+      let newFinal =
+        "";
+
+
+      let newInterim =
+        "";
+
+
+      for (
+        let i = event.resultIndex;
+        i < event.results.length;
+        i++
+      ) {
+
+        const raw =
+          event.results[i][0]
+            .transcript
+            .trim();
+
+
+        if (
+          event.results[i].isFinal
+        ) {
+
+          newFinal +=
+            " " + raw;
+
+        }
+
+        else {
+
+          newInterim +=
+            " " + raw;
+
+        }
+
+      }
+
+
+      /*
+         Process finalized speech.
+      */
+
+      if (
+        newFinal.trim()
+      ) {
+
+        const processed =
+          processSpeech(
+            newFinal
+          );
+
+
+        if (processed) {
+
+          finalText =
+            (
+              finalText +
+              " " +
+              processed
+            )
+            .replace(
+              /\s+/g,
+              " "
+            )
+            .trim();
+
+        }
+
+      }
+
+
+      /*
+         Process speech that Chrome
+         has not finalized yet.
+
+         This makes the display feel
+         live instead of waiting for
+         the complete sentence.
+      */
+
+      if (
+        newInterim.trim()
+      ) {
+
+        interimText =
+          processSpeech(
+            newInterim
+          );
+
+      }
+
+
+      renderCaption();
+
+
+      /*
+         Start the disappearance timer
+         after finalized speech.
+
+         More speech cancels it.
+      */
+
+      if (
+        newFinal.trim() &&
+        !newInterim.trim()
+      ) {
+
+        startSilenceTimer();
+
+      }
+
+    };
+
+
+  /*
+     ==================================================
+     ERROR
+     ==================================================
+  */
+
+  recognition.onerror =
+    event => {
+
+      if (
+        event.error ===
+          "not-allowed" ||
+
+        event.error ===
+          "service-not-allowed"
+      ) {
+
+        listening = false;
+
+        startBtn.disabled =
+          false;
+
+        stopBtn.disabled =
+          true;
+
+        setStatus(
+          "Microphone permission denied"
+        );
+
+      }
+
+      else {
+
+        setStatus(
+          "Recognition: " +
+          event.error
+        );
+
+      }
+
+    };
+
+
+  /*
+     ==================================================
+     AUTOMATIC RESTART
+     ==================================================
+  */
+
+  recognition.onend =
+    () => {
+
+      if (listening) {
+
+        try {
+
+          recognition.start();
+
+        }
+
+        catch (error) {}
+
+      }
+
+      else {
+
+        startBtn.disabled =
+          false;
+
+        stopBtn.disabled =
+          true;
+
+        setStatus(
+          "Stopped"
+        );
+
+      }
+
+    };
+
+
+  /*
+     ==================================================
+     START BUTTON
+     ==================================================
+  */
+
+  startBtn.addEventListener(
+    "click",
+    () => {
+
+      if (!listening) {
+
+        updateLanguage();
+
+        cancelSilenceTimer();
+
+        try {
+
+          recognition.start();
 
         }
 
         catch (error) {
 
           setStatus(
-            "Full screen unavailable",
-            true
+            "Could not start listening"
           );
 
         }
 
       }
-    );
+
+    }
+  );
 
 
-    document.addEventListener(
-      "fullscreenchange",
-      () => {
+  /*
+     ==================================================
+     STOP BUTTON
+     ==================================================
+  */
 
-        if (
-          !document.fullscreenElement
-        ) {
+  stopBtn.addEventListener(
+    "click",
+    () => {
 
-          document
-            .getElementById("controls")
-            .classList
-            .remove("hidden");
+      listening = false;
 
-        }
+      cancelSilenceTimer();
+
+      interimText = "";
+
+      try {
+
+        recognition.stop();
 
       }
-    );
 
-
-    /*
-      =========================================
-      SPEECH RECOGNITION
-      =========================================
-    */
-
-    if (!SpeechRecognition) {
+      catch (error) {}
 
       setStatus(
-        "Chrome or Edge speech recognition is required.",
-        true
-      );
-
-      startBtn.disabled = true;
-
-    }
-
-    else {
-
-      recognition =
-        new SpeechRecognition();
-
-
-      recognition.continuous =
-        true;
-
-
-      recognition.interimResults =
-        true;
-
-
-      recognition.maxAlternatives =
-        3;
-
-
-      /*
-        =======================================
-        LANGUAGE
-        =======================================
-      */
-
-      function updateRecognitionLanguage() {
-
-        recognition.lang =
-          languageMode.value === "th-TH"
-            ? "th-TH"
-            : "en-US";
-
-      }
-
-
-      updateRecognitionLanguage();
-
-
-      languageMode.addEventListener(
-        "change",
-        () => {
-
-          updateRecognitionLanguage();
-
-          /*
-            Restart recognition so the
-            language change takes effect.
-          */
-
-          if (listening) {
-
-            try {
-
-              recognition.stop();
-
-            }
-
-            catch (error) {}
-
-          }
-
-        }
-      );
-
-
-      /*
-        =======================================
-        START
-        =======================================
-      */
-
-      recognition.onstart =
-        () => {
-
-          listening = true;
-
-          startBtn.disabled = true;
-
-          stopBtn.disabled = false;
-
-          setStatus(
-            "Listening…"
-          );
-
-        };
-
-
-      /*
-        =======================================
-        RESULTS
-        =======================================
-      */
-
-      recognition.onresult =
-        event => {
-
-          /*
-            Any new speech cancels the
-            disappearance timer.
-          */
-
-          cancelSilenceTimer();
-
-
-          interimText = "";
-
-
-          let latestFinal = "";
-
-
-          for (
-            let i = event.resultIndex;
-            i < event.results.length;
-            i++
-          ) {
-
-            const transcript =
-              event.results[i][0]
-                .transcript
-                .trim();
-
-
-            if (
-              event.results[i].isFinal
-            ) {
-
-              latestFinal +=
-                " " + transcript;
-
-            }
-
-            else {
-
-              interimText +=
-                " " + transcript;
-
-            }
-
-          }
-
-
-          /*
-            Process finalized speech.
-          */
-
-          if (
-            latestFinal.trim()
-          ) {
-
-            const cleaned =
-              prepareText(
-                latestFinal
-              );
-
-
-            if (cleaned) {
-
-              finalText =
-                (
-                  finalText +
-                  " " +
-                  cleaned
-                ).trim();
-
-            }
-
-          }
-
-
-          /*
-            Process interim speech.
-          */
-
-          interimText =
-            prepareText(
-              interimText
-            );
-
-
-          renderCaption();
-
-
-          /*
-            We start the silence timer
-            after finalized speech.
-
-            If more speech arrives,
-            it gets cancelled above.
-          */
-
-          if (
-            latestFinal.trim() &&
-            !interimText
-          ) {
-
-            startSilenceTimer();
-
-          }
-
-        };
-
-
-      /*
-        =======================================
-        ERROR HANDLING
-        =======================================
-      */
-
-      recognition.onerror =
-        event => {
-
-          if (
-            event.error ===
-              "not-allowed" ||
-
-            event.error ===
-              "service-not-allowed"
-          ) {
-
-            listening = false;
-
-            startBtn.disabled = false;
-
-            stopBtn.disabled = true;
-
-            setStatus(
-              "Microphone permission denied",
-              true
-            );
-
-          }
-
-          else {
-
-            setStatus(
-              "Recognition: " +
-              event.error,
-              true
-            );
-
-          }
-
-        };
-
-
-      /*
-        =======================================
-        AUTOMATIC RESTART
-        =======================================
-      */
-
-      recognition.onend =
-        () => {
-
-          if (listening) {
-
-            try {
-
-              recognition.start();
-
-            }
-
-            catch (error) {}
-
-          }
-
-          else {
-
-            startBtn.disabled =
-              false;
-
-            stopBtn.disabled =
-              true;
-
-            setStatus(
-              "Stopped"
-            );
-
-          }
-
-        };
-
-
-      /*
-        =======================================
-        START BUTTON
-        =======================================
-      */
-
-      startBtn.addEventListener(
-        "click",
-        () => {
-
-          if (!listening) {
-
-            updateRecognitionLanguage();
-
-            cancelSilenceTimer();
-
-            try {
-
-              recognition.start();
-
-            }
-
-            catch (error) {
-
-              setStatus(
-                "Could not start listening",
-                true
-              );
-
-            }
-
-          }
-
-        }
-      );
-
-
-      /*
-        =======================================
-        STOP BUTTON
-        =======================================
-      */
-
-      stopBtn.addEventListener(
-        "click",
-        () => {
-
-          listening = false;
-
-          cancelSilenceTimer();
-
-          interimText = "";
-
-          try {
-
-            recognition.stop();
-
-          }
-
-          catch (error) {}
-
-          setStatus(
-            "Stopped"
-          );
-
-        }
+        "Stopped"
       );
 
     }
+  );
+
+}
 
 
-    /*
-      =========================================
-      INITIAL STATE
-      =========================================
-    */
+/*
+   =====================================================
+   INITIAL DISPLAY
+   =====================================================
+*/
 
-    caption.style.fontSize =
-      sizeSelect.value + "px";
+caption.style.fontSize =
+  sizeSelect.value + "px";
 
-
-  </script>
+</script>
 
 </body>
 </html>
