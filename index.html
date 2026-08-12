@@ -1,21 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Classroom Live Caption</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    color: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#controls {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: #171717;
+    border-bottom: 1px solid #444;
+    flex-wrap: wrap;
+}
+
+button,
+select {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 15px;
+    padding: 9px 12px;
+    border: 1px solid #666;
+    border-radius: 6px;
+    background: #292929;
+    color: #fff;
+    cursor: pointer;
+}
+
+button:hover,
+select:hover {
+    background: #383838;
+}
+
+button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 14px;
+}
+
+#status {
+    margin-left: auto;
+    color: #aaa;
+    font-size: 14px;
+}
+
+#captionArea {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 3vh 5vw;
+    overflow: hidden;
+}
+
+#caption {
+    width: 100%;
+    max-width: 1900px;
+    text-align: center;
+    font-size: 90px;
+    font-weight: 700;
+    line-height: 1.12;
+}
+
+#captionText {
+    width: 100%;
+    max-height: 4.5em;
+    overflow: hidden;
+    overflow-wrap: break-word;
+    word-break: normal;
+}
+
+#captionText.interim {
+    opacity: 0.75;
+}
+
+#captionText.spelling {
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.hidden {
+    visibility: hidden;
+}
+
+@media (max-width: 700px) {
+    #status {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    #caption {
+        font-size: 55px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div id="controls">
+
+    <button id="startBtn">▶ Start Listening</button>
+
+    <button id="stopBtn" disabled>■ Stop</button>
+
+    <button id="clearBtn">Clear</button>
+
+    <button id="fullscreenBtn">⛶ Full Screen</button>
+
+    <label>
+        Size:
+        <select id="sizeSelect">
+            <option value="50">50</option>
+            <option value="60">60</option>
+            <option value="70">70</option>
+            <option value="80">80</option>
+            <option value="90" selected>90</option>
+            <option value="100">100</option>
+            <option value="110">110</option>
+            <option value="120">120</option>
+        </select>
+    </label>
+
+    <label>
+        Language:
+        <select id="languageSelect">
+            <option value="en-US">English</option>
+            <option value="th-TH">Thai</option>
+        </select>
+    </label>
+
+    <span id="status">Ready</span>
+
+</div>
+
+<main id="captionArea">
+
+    <div id="caption">
+
+        <div id="captionText" class="hidden"></div>
+
+    </div>
+
+</main>
+
+<script>
+"use strict";
+
+/* =========================================================
+   SPEECH RECOGNITION
+   ========================================================= */
+
+const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+
+/* =========================================================
+   ELEMENTS
+   ========================================================= */
+
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+const clearBtn = document.getElementById("clearBtn");
+const fullscreenBtn = document.getElementById("fullscreenBtn");
+
+const sizeSelect = document.getElementById("sizeSelect");
+const languageSelect = document.getElementById("languageSelect");
+
+const status = document.getElementById("status");
+
+const caption = document.getElementById("caption");
+const captionText = document.getElementById("captionText");
+
+
+/* =========================================================
+   STATE
+   ========================================================= */
+
+let recognition = null;
+
+let listening = false;
+let manuallyStopped = false;
+
+let finalCaption = "";
+let interimCaption = "";
+
+let silenceTimer = null;
+
+let spellingMode = false;
+let waitingForSpellingWord = false;
+
+let lastFinalSentence = "";
+
+const SILENCE_DELAY = 1500;
+const MIN_FONT_SIZE = 35;
+
+
+/* =========================================================
+   STATUS
+   ========================================================= */
+
+function setStatus(message) {
+    status.textContent = message;
+}
+
+
+/* =========================================================
+   CAPTION
+   ========================================================= */
+
+function clearCaption() {
+
+    finalCaption = "";
+    interimCaption = "";
+
+    spellingMode = false;
+    waitingForSpellingWord = false;
+
+    lastFinalSentence = "";
+
+    captionText.textContent = "";
+
+    captionText.classList.add("hidden");
+    captionText.classList.remove("interim");
+    captionText.classList.remove("spelling");
+
+    cancelSilenceTimer();
+}
+
+
+function showCaption() {
+    captionText.classList.remove("hidden");
+}
+
+
+function hideCaption() {
+    captionText.classList.add("hidden");
+}
+
+
+/* =========================================================
+   SILENCE TIMER
+   ========================================================= */
+
+function cancelSilenceTimer() {
+
+    if (silenceTimer !== null) {
+        clearTimeout(silenceTimer);
+        silenceTimer = null;
+    }
+}
+
+
+function startSilenceTimer() {
+
+    cancelSilenceTimer();
+
+    silenceTimer = setTimeout(function() {
+
+        finalCaption = "";
+        interimCaption = "";
+
+        spellingMode = false;
+        waitingForSpellingWord = false;
+
+        lastFinalSentence = "";
+
+        captionText.textContent = "";
+
+        hideCaption();
+
+        silenceTimer = null;
+
+    }, SILENCE_DELAY);
+}
+
+
+/* =========================================================
+   FILLER WORDS
+   ========================================================= */
+
+function removeFillers(text) {
+
+    return text
+        .replace(/\b(um+|uh+|erm+|er+|hmm+|mm+)\b/gi, "")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+}
+
+
+/* =========================================================
+   REPEATED WORDS
+   ========================================================= */
+
+function removeImmediateRepeats(text) {
+
+    const words = text.split(/\s+/);
+    const result = [];
+
+    for (const word of words) {
+
+        const current =
+            word
+                .toLowerCase()
+                .replace(/[.,!?;:"'()[\]{}-]/g, "");
+
+        const previous =
+            result.length
+                ? result[result.length - 1]
+                    .toLowerCase()
+                    .replace(/[.,!?;:"'()[\]{}-]/g, "")
+                : "";
+
+        if (current && current === previous) {
+            continue;
+        }
+
+        result.push(word);
+    }
+
+    return result.join(" ");
+}
+
+
+/* =========================================================
+   SPOKEN PUNCTUATION
+   ========================================================= */
+
+function convertSpokenPunctuation(text) {
+
+    let t = text;
+
+    const replacements = [
+
+        [/\bquestion mark\b/gi, "?"],
+        [/\bquestionmark\b/gi, "?"],
+
+        [/\bexclamation mark\b/gi, "!"],
+        [/\bexclamation point\b/gi, "!"],
+
+        [/\bcomma\b/gi, ","],
+
+        [/\bfull stop\b/gi, "."],
+        [/\bperiod\b/gi, "."],
+
+        [/\bcolon\b/gi, ":"],
+        [/\bsemicolon\b/gi, ";"],
+
+        [/\bopen parenthesis\b/gi, "("],
+        [/\bclose parenthesis\b/gi, ")"],
+
+        [/\bquotation mark\b/gi, "\""],
+
+        [/\bhyphen\b/gi, "-"],
+        [/\bdash\b/gi, "—"],
+
+        [/\bnew line\b/gi, "\n"],
+        [/\bnew paragraph\b/gi, "\n\n"]
+    ];
+
+    for (const [pattern, replacement] of replacements) {
+        t = t.replace(pattern, replacement);
+    }
+
+    return t;
+}
+
+
+/* =========================================================
+   QUESTION MARKS
+   ========================================================= */
+
+function addQuestionMark(text) {
+
+    const t = text.trim();
+
+    if (!t) {
+        return "";
+    }
+
+    if (/[.!?]$/.test(t)) {
+        return t;
+    }
+
+    const questionWords =
+        /^(who|what|when|where|why|how|which|whose|whom)\b/i;
+
+    const auxiliaryWords =
+        /^(am|is|are|was|were|do|does|did|can|could|will|would|should|shall|may|might|have|has|had)\b/i;
+
+    if (
+        questionWords.test(t) ||
+        auxiliaryWords.test(t)
+    ) {
+        return t + "?";
+    }
+
+    return t;
+}
+
+
+/* =========================================================
+   NUMBER CONVERSION
+   ========================================================= */
+
+const numberUnits = {
+    zero: 0,
+    one: 1,
+    two: 2,
+    three: 3,
+    four: 4,
+    five: 5,
+    six: 6,
+    seven: 7,
+    eight: 8,
+    nine: 9,
+    ten: 10,
+    eleven: 11,
+    twelve: 12,
+    thirteen: 13,
+    fourteen: 14,
+    fifteen: 15,
+    sixteen: 16,
+    seventeen: 17,
+    eighteen: 18,
+    nineteen: 19
+};
+
+const numberTens = {
+    twenty: 20,
+    thirty: 30,
+    forty: 40,
+    fifty: 50,
+    sixty: 60,
+    seventy: 70,
+    eighty: 80,
+    ninety: 90
+};
+
+
+function wordsToNumber(words) {
+
+    let total = 0;
+    let current = 0;
+    let found = false;
+
+    for (const word of words) {
+
+        if (numberUnits[word] !== undefined) {
+
+            current += numberUnits[word];
+            found = true;
+
+        } else if (numberTens[word] !== undefined) {
+
+            current += numberTens[word];
+            found = true;
+
+        } else if (word === "hundred") {
+
+            if (current === 0) {
+                current = 1;
+            }
+
+            current *= 100;
+            found = true;
+
+        } else if (word === "thousand") {
+
+            if (current === 0) {
+                current = 1;
+            }
+
+            total += current * 1000;
+            current = 0;
+            found = true;
+
+        } else {
+
+            return null;
+        }
+    }
+
+    return found ? total + current : null;
+}
+
+
+function convertNumbers(text) {
+
+    const tokens = text.split(/\s+/);
+    const result = [];
+
+    let i = 0;
+
+    while (i < tokens.length) {
+
+        let numberValue = null;
+        let numberLength = 0;
+
+        const maximum =
+            Math.min(6, tokens.length - i);
+
+        for (let length = maximum; length >= 1; length--) {
+
+            const candidate =
+                tokens
+                    .slice(i, i + length)
+                    .map(function(word) {
+
+                        return word
+                            .toLowerCase()
+                            .replace(/[^a-z]/g, "");
+
+                    });
+
+            const value = wordsToNumber(candidate);
+
+            if (value !== null) {
+
+                numberValue = value;
+                numberLength = length;
+
+                break;
+            }
+        }
+
+        if (numberLength > 0) {
+
+            result.push(String(numberValue));
+            i += numberLength;
+
+        } else {
+
+            result.push(tokens[i]);
+            i++;
+        }
+    }
+
+    return result.join(" ");
+}
+
+
+/* =========================================================
+   SPELLING
+   ========================================================= */
+
+function spellWord(word) {
+
+    const clean =
+        word
+            .replace(/[^A-Za-z]/g, "")
+            .toUpperCase();
+
+    if (!clean) {
+        return "";
+    }
+
+    return clean.split("").join("-");
+}
+
+
+function extractSpellCommand(text) {
+
+    const cleaned =
+        text
+            .trim()
+            .replace(/[.!?]+$/g, "")
+            .trim();
+
+    const match =
+        cleaned.match(
+            /^(?:please\s+)?spell(?:\s+the\s+word)?\s+([A-Za-z]+)$/i
+        );
+
+    if (!match) {
+        return null;
+    }
+
+    return match[1];
+}
+
+
+function isSpellCommand(text) {
+
+    const cleaned =
+        text
+            .trim()
+            .replace(/[.!?]+$/g, "")
+            .trim()
+            .toLowerCase();
+
+    return (
+        cleaned === "spell" ||
+        cleaned === "please spell"
+    );
+}
+
+
 function processSpelling(text) {
 
-    const cleaned = text
-        .trim()
-        .replace(/[.!?]+$/g, "")
-        .trim();
+    const cleaned =
+        text
+            .trim()
+            .replace(/[.!?]+$/g, "")
+            .trim();
 
-    /*
-        SPELL + WORD
 
-        Example:
-        "spell specific"
+    /* "spell apple" */
 
-        Result:
-        S-P-E-C-I-F-I-C
-    */
-
-    const directWord = extractSpellCommand(cleaned);
+    const directWord =
+        extractSpellCommand(cleaned);
 
     if (directWord) {
 
@@ -26,14 +652,7 @@ function processSpelling(text) {
     }
 
 
-    /*
-        SPELL BY ITSELF
-
-        Example:
-        "spell"
-
-        The next single word will be spelled.
-    */
+    /* "spell" */
 
     if (isSpellCommand(cleaned)) {
 
@@ -44,19 +663,15 @@ function processSpelling(text) {
     }
 
 
-    /*
-        SPELL MODE
-
-        If "spell" was spoken previously,
-        the next single word is spelled.
-    */
+    /* Word spoken after "spell" */
 
     if (
         spellingMode &&
         waitingForSpellingWord
     ) {
 
-        const words = cleaned.split(/\s+/);
+        const words =
+            cleaned.split(/\s+/);
 
         if (words.length === 1) {
 
@@ -71,18 +686,611 @@ function processSpelling(text) {
             }
         }
 
-
-        /*
-            The next speech was not a single word.
-
-            Cancel spelling mode and allow
-            normal transcription to handle it.
-        */
-
         spellingMode = false;
         waitingForSpellingWord = false;
     }
 
-
     return null;
 }
+
+
+/* =========================================================
+   NORMAL SPEECH
+   ========================================================= */
+
+function processNormalSpeech(text) {
+
+    if (!text) {
+        return "";
+    }
+
+    let t = text.trim();
+
+    t = removeFillers(t);
+
+    t = removeImmediateRepeats(t);
+
+    t = convertSpokenPunctuation(t);
+
+    t = convertNumbers(t);
+
+    t =
+        t
+            .replace(/\s+([,.!?;:)\]}])/g, "$1")
+            .replace(/([(\[])\s+/g, "$1")
+            .replace(/\s{2,}/g, " ")
+            .trim();
+
+    t = addQuestionMark(t);
+
+    return t;
+}
+
+
+/* =========================================================
+   FONT FITTING
+   ========================================================= */
+
+function fitCaption() {
+
+    if (!captionText.textContent.trim()) {
+        return;
+    }
+
+    let fontSize =
+        Number(sizeSelect.value);
+
+    caption.style.fontSize =
+        fontSize + "px";
+
+    while (
+        captionText.scrollHeight >
+        captionText.clientHeight &&
+        fontSize > MIN_FONT_SIZE
+    ) {
+
+        fontSize -= 2;
+
+        caption.style.fontSize =
+            fontSize + "px";
+    }
+}
+
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+
+function renderCaption() {
+
+    const display =
+        [finalCaption, interimCaption]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+
+    if (!display) {
+
+        captionText.textContent = "";
+
+        hideCaption();
+
+        return;
+    }
+
+    captionText.textContent = display;
+
+    captionText.classList.toggle(
+        "interim",
+        Boolean(interimCaption)
+    );
+
+    showCaption();
+
+    requestAnimationFrame(fitCaption);
+}
+
+
+/* =========================================================
+   FINAL SPEECH
+   ========================================================= */
+
+function addFinalSpeech(text) {
+
+    if (!text.trim()) {
+        return;
+    }
+
+
+    /* Check spelling commands first */
+
+    const spellingResult =
+        processSpelling(text);
+
+    if (spellingResult !== null) {
+
+        finalCaption = spellingResult;
+        interimCaption = "";
+
+        captionText.classList.toggle(
+            "spelling",
+            Boolean(spellingResult)
+        );
+
+        renderCaption();
+
+        return;
+    }
+
+
+    /* If "spell" is waiting for the next word,
+       do not display anything yet. */
+
+    if (
+        spellingMode &&
+        waitingForSpellingWord
+    ) {
+        return;
+    }
+
+
+    const processed =
+        processNormalSpeech(text);
+
+    if (!processed.trim()) {
+        return;
+    }
+
+
+    /* Prevent exact duplicate recognition */
+
+    if (
+        processed.toLowerCase() ===
+        lastFinalSentence.toLowerCase()
+    ) {
+        return;
+    }
+
+
+    /* Punctuation */
+
+    if (
+        /^[,.!?;:)\]}]/.test(processed)
+    ) {
+
+        finalCaption =
+            finalCaption.trim() +
+            processed;
+
+    } else {
+
+        finalCaption =
+            (
+                finalCaption +
+                " " +
+                processed
+            )
+                .replace(/[ \t]+/g, " ")
+                .trim();
+    }
+
+
+    lastFinalSentence = processed;
+
+    captionText.classList.remove("spelling");
+
+    renderCaption();
+}
+
+
+/* =========================================================
+   SPEECH RECOGNITION SETUP
+   ========================================================= */
+
+if (!SpeechRecognition) {
+
+    startBtn.disabled = true;
+    stopBtn.disabled = true;
+
+    setStatus(
+        "Speech recognition is not supported. Use Google Chrome."
+    );
+
+} else {
+
+    recognition =
+        new SpeechRecognition();
+
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    recognition.lang = languageSelect.value;
+
+
+    recognition.onstart = function() {
+
+        listening = true;
+
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+
+        setStatus("Listening...");
+    };
+
+
+    recognition.onresult = function(event) {
+
+        cancelSilenceTimer();
+
+        let finalText = "";
+        let interimText = "";
+
+        for (
+            let i = event.resultIndex;
+            i < event.results.length;
+            i++
+        ) {
+
+            const result =
+                event.results[i];
+
+            const transcript =
+                result[0].transcript.trim();
+
+            if (!transcript) {
+                continue;
+            }
+
+            if (result.isFinal) {
+
+                finalText +=
+                    " " + transcript;
+
+            } else {
+
+                interimText +=
+                    " " + transcript;
+            }
+        }
+
+
+        if (finalText.trim()) {
+
+            addFinalSpeech(
+                finalText.trim()
+            );
+
+            startSilenceTimer();
+        }
+
+
+        if (
+            interimText.trim() &&
+            !waitingForSpellingWord
+        ) {
+
+            interimCaption =
+                processNormalSpeech(
+                    interimText.trim()
+                );
+
+        } else {
+
+            interimCaption = "";
+        }
+
+
+        renderCaption();
+    };
+
+
+    recognition.onerror = function(event) {
+
+        if (
+            event.error === "not-allowed" ||
+            event.error === "service-not-allowed"
+        ) {
+
+            listening = false;
+            manuallyStopped = true;
+
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+
+            setStatus(
+                "Microphone permission denied."
+            );
+
+            return;
+        }
+
+
+        if (event.error === "audio-capture") {
+
+            setStatus(
+                "Microphone not available."
+            );
+
+            return;
+        }
+
+
+        if (event.error === "network") {
+
+            setStatus(
+                "Speech recognition network error."
+            );
+
+            return;
+        }
+
+
+        if (event.error === "no-speech") {
+
+            setStatus("Listening...");
+
+            return;
+        }
+
+
+        setStatus(
+            "Speech error: " + event.error
+        );
+    };
+
+
+    recognition.onend = function() {
+
+        if (
+            listening &&
+            !manuallyStopped
+        ) {
+
+            setStatus("Listening...");
+
+            setTimeout(function() {
+
+                if (
+                    !listening ||
+                    manuallyStopped
+                ) {
+                    return;
+                }
+
+                try {
+
+                    recognition.lang =
+                        languageSelect.value;
+
+                    recognition.start();
+
+                } catch (error) {
+
+                    /* Chrome can throw
+                       InvalidStateError if it
+                       is already restarting. */
+
+                }
+
+            }, 300);
+
+        } else {
+
+            listening = false;
+
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+
+            setStatus("Stopped");
+        }
+    };
+}
+
+
+/* =========================================================
+   START
+   ========================================================= */
+
+startBtn.addEventListener(
+    "click",
+    function() {
+
+        if (!recognition) {
+
+            setStatus(
+                "Speech recognition is unavailable."
+            );
+
+            return;
+        }
+
+        if (listening) {
+            return;
+        }
+
+        manuallyStopped = false;
+
+        clearCaption();
+
+        recognition.lang =
+            languageSelect.value;
+
+        try {
+
+            recognition.start();
+
+        } catch (error) {
+
+            setStatus(
+                "Could not start microphone."
+            );
+        }
+    }
+);
+
+
+/* =========================================================
+   STOP
+   ========================================================= */
+
+stopBtn.addEventListener(
+    "click",
+    function() {
+
+        manuallyStopped = true;
+        listening = false;
+
+        cancelSilenceTimer();
+
+        interimCaption = "";
+
+        spellingMode = false;
+        waitingForSpellingWord = false;
+
+        if (recognition) {
+
+            try {
+                recognition.stop();
+            } catch (error) {}
+        }
+
+        renderCaption();
+
+        setStatus("Stopped");
+
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+    }
+);
+
+
+/* =========================================================
+   CLEAR
+   ========================================================= */
+
+clearBtn.addEventListener(
+    "click",
+    function() {
+
+        clearCaption();
+
+        setStatus(
+            listening
+                ? "Listening..."
+                : "Ready"
+        );
+    }
+);
+
+
+/* =========================================================
+   FONT SIZE
+   ========================================================= */
+
+sizeSelect.addEventListener(
+    "change",
+    function() {
+
+        caption.style.fontSize =
+            sizeSelect.value + "px";
+
+        requestAnimationFrame(fitCaption);
+    }
+);
+
+
+/* =========================================================
+   LANGUAGE
+   ========================================================= */
+
+languageSelect.addEventListener(
+    "change",
+    function() {
+
+        if (!recognition) {
+            return;
+        }
+
+        recognition.lang =
+            languageSelect.value;
+
+        if (listening) {
+
+            try {
+                recognition.stop();
+            } catch (error) {}
+        }
+    }
+);
+
+
+/* =========================================================
+   FULL SCREEN
+   ========================================================= */
+
+fullscreenBtn.addEventListener(
+    "click",
+    async function() {
+
+        try {
+
+            if (!document.fullscreenElement) {
+
+                await document.documentElement
+                    .requestFullscreen();
+
+                document
+                    .getElementById("controls")
+                    .style.display = "none";
+
+            } else {
+
+                await document.exitFullscreen();
+            }
+
+        } catch (error) {
+
+            setStatus(
+                "Full screen unavailable."
+            );
+        }
+    }
+);
+
+
+/* =========================================================
+   FULL SCREEN CHANGE
+   ========================================================= */
+
+document.addEventListener(
+    "fullscreenchange",
+    function() {
+
+        const controls =
+            document.getElementById("controls");
+
+        if (document.fullscreenElement) {
+
+            controls.style.display = "none";
+
+        } else {
+
+            controls.style.display = "flex";
+        }
+    }
+);
+
+
+/* =========================================================
+   INITIALIZE
+   ========================================================= */
+
+caption.style.fontSize =
+    sizeSelect.value + "px";
+
+hideCaption();
+
+</script>
+
+</body>
+</html>
