@@ -1,37 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
 
 <title>Classroom Live Caption</title>
 
 <style>
+
+/* =========================================================
+   BASIC PAGE
+========================================================= */
+
 * {
     box-sizing: border-box;
 }
 
 html,
 body {
-    margin: 0;
     width: 100%;
     height: 100%;
-    background: #000;
-    color: #fff;
-    font-family: Arial, Helvetica, sans-serif;
+    margin: 0;
+    padding: 0;
+
+    background: black;
+    color: white;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+    overflow: hidden;
 }
 
 body {
     position: relative;
-    overflow: hidden;
 }
 
 
 /* =========================================================
-   CONTROLS
+   TOP CONTROL BAR
 ========================================================= */
 
 #controls {
+
     position: fixed;
 
     top: 0;
@@ -39,92 +56,124 @@ body {
 
     width: 100%;
 
-    z-index: 1000;
+    min-height: 60px;
+
+    padding: 10px 12px;
 
     display: flex;
+
     align-items: center;
 
     gap: 8px;
 
-    padding: 10px 12px;
+    flex-wrap: wrap;
 
     background: #171717;
 
-    border-bottom: 1px solid #444;
+    border-bottom:
+        1px solid #444;
 
-    flex-wrap: wrap;
+    z-index: 1000;
 }
+
 
 button,
 select {
-    font-family: Arial, Helvetica, sans-serif;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
 
     font-size: 15px;
 
-    padding: 9px 12px;
+    padding:
+        9px 12px;
 
-    border: 1px solid #666;
+    border:
+        1px solid #666;
 
     border-radius: 6px;
 
     background: #292929;
 
-    color: #fff;
+    color: white;
 
     cursor: pointer;
 }
 
+
 button:hover,
 select:hover {
+
     background: #383838;
 }
 
+
 button:disabled {
+
     opacity: 0.45;
+
     cursor: default;
 }
 
+
 label {
+
     display: flex;
+
     align-items: center;
+
     gap: 5px;
+
     font-size: 14px;
 }
 
+
 #status {
+
     margin-left: auto;
+
     color: #aaa;
+
     font-size: 14px;
 }
 
 
 /* =========================================================
-   CAPTION AREA
-   TRUE CENTER OF SCREEN
+   CAPTION POSITION
+
+   IMPORTANT:
+   The caption itself is fixed to the CENTER
+   of the browser viewport.
+
+   It is NOT inside a flex container.
 ========================================================= */
 
 #captionArea {
 
     position: fixed;
 
-    top: 0;
-    left: 0;
+    top: 50%;
+    left: 50%;
 
-    width: 100vw;
-    height: 100vh;
+    transform:
+        translate(-50%, -50%);
 
-    display: flex;
+    width: 90vw;
 
-    justify-content: center;
-    align-items: center;
+    max-width: 1900px;
 
-    padding: 0 5vw;
+    height: auto;
 
-    overflow: hidden;
-
-    pointer-events: none;
+    margin: 0;
+    padding: 0;
 
     z-index: 500;
+
+    text-align: center;
+
+    pointer-events: none;
 }
 
 
@@ -136,7 +185,8 @@ label {
 
     width: 100%;
 
-    max-width: 1900px;
+    margin: 0;
+    padding: 0;
 
     text-align: center;
 
@@ -145,20 +195,36 @@ label {
     font-weight: 700;
 
     line-height: 1.12;
+
+    /*
+       Prevent the caption from becoming
+       a giant vertical block.
+    */
+
+    height: auto;
 }
 
 
 /* =========================================================
    CAPTION TEXT
 
-   MAXIMUM TWO LINES
+   MAXIMUM = TWO LINES
 ========================================================= */
 
 #captionText {
 
+    display: block;
+
     width: 100%;
 
+    margin: 0;
+    padding: 0;
+
     text-align: center;
+
+    font-size: inherit;
+
+    font-weight: inherit;
 
     line-height: 1.12;
 
@@ -170,59 +236,87 @@ label {
 
     overflow: hidden;
 
-    overflow-wrap: normal;
+    overflow-wrap: break-word;
 
     word-break: normal;
 
     /*
-       Optional readability background.
+       Shadow makes white text easier
+       to see against classroom displays.
     */
 
-    padding: 0 10px;
-
     text-shadow:
-        2px 2px 4px #000,
-        -2px -2px 4px #000,
-        2px -2px 4px #000,
-        -2px 2px 4px #000;
+
+        2px 2px 4px black,
+
+        -2px -2px 4px black,
+
+        2px -2px 4px black,
+
+        -2px 2px 4px black;
 }
+
+
+/* =========================================================
+   INTERIM SPEECH
+========================================================= */
 
 #captionText.interim {
-    opacity: 0.75;
+
+    opacity: 0.70;
 }
 
+
+/* =========================================================
+   SPELLING
+========================================================= */
+
 #captionText.spelling {
+
     font-weight: 900;
+
     letter-spacing: 0.08em;
+
     text-transform: uppercase;
 }
 
+
+/* =========================================================
+   HIDDEN
+========================================================= */
+
 .hidden {
+
     visibility: hidden;
 }
 
 
 /* =========================================================
-   MOBILE
+   SMALL SCREEN
 ========================================================= */
 
 @media (max-width: 700px) {
 
-    #status {
-        margin-left: 0;
-        width: 100%;
+    #captionArea {
+
+        width: 92vw;
     }
 
     #caption {
+
         font-size: 55px;
     }
 
-    #captionArea {
-        padding: 0 4vw;
+    #status {
+
+        width: 100%;
+
+        margin-left: 0;
     }
 }
 
 </style>
+
 </head>
 
 
@@ -239,60 +333,100 @@ label {
         ▶ Start Listening
     </button>
 
-    <button id="stopBtn" disabled>
+
+    <button id="stopBtn"
+            disabled>
+
         ■ Stop
+
     </button>
+
 
     <button id="clearBtn">
+
         Clear
+
     </button>
 
+
     <button id="fullscreenBtn">
+
         ⛶ Full Screen
+
     </button>
 
 
     <label>
+
         Size:
 
         <select id="sizeSelect">
 
-            <option value="50">50</option>
-            <option value="60">60</option>
-            <option value="70">70</option>
-            <option value="80">80</option>
+            <option value="50">
+                50
+            </option>
 
-            <option value="90" selected>
+            <option value="60">
+                60
+            </option>
+
+            <option value="70">
+                70
+            </option>
+
+            <option value="80">
+                80
+            </option>
+
+            <option value="90"
+                    selected>
                 90
             </option>
 
-            <option value="100">100</option>
-            <option value="110">110</option>
-            <option value="120">120</option>
+            <option value="100">
+                100
+            </option>
+
+            <option value="110">
+                110
+            </option>
+
+            <option value="120">
+                120
+            </option>
 
         </select>
+
     </label>
 
 
     <label>
+
         Language:
 
         <select id="languageSelect">
 
             <option value="en-US">
+
                 English
+
             </option>
 
             <option value="th-TH">
+
                 Thai
+
             </option>
 
         </select>
+
     </label>
 
 
     <span id="status">
+
         Ready
+
     </span>
 
 </div>
@@ -302,18 +436,18 @@ label {
      CAPTION
 ======================================================= -->
 
-<main id="captionArea">
+<div id="captionArea">
 
     <div id="caption">
 
-        <div
-            id="captionText"
-            class="hidden">
+        <div id="captionText"
+             class="hidden">
+
         </div>
 
     </div>
 
-</main>
+</div>
 
 
 <script>
@@ -335,31 +469,57 @@ const SpeechRecognition =
 ========================================================= */
 
 const startBtn =
-    document.getElementById("startBtn");
+    document.getElementById(
+        "startBtn"
+    );
+
 
 const stopBtn =
-    document.getElementById("stopBtn");
+    document.getElementById(
+        "stopBtn"
+    );
+
 
 const clearBtn =
-    document.getElementById("clearBtn");
+    document.getElementById(
+        "clearBtn"
+    );
+
 
 const fullscreenBtn =
-    document.getElementById("fullscreenBtn");
+    document.getElementById(
+        "fullscreenBtn"
+    );
+
 
 const sizeSelect =
-    document.getElementById("sizeSelect");
+    document.getElementById(
+        "sizeSelect"
+    );
+
 
 const languageSelect =
-    document.getElementById("languageSelect");
+    document.getElementById(
+        "languageSelect"
+    );
+
 
 const status =
-    document.getElementById("status");
+    document.getElementById(
+        "status"
+    );
+
 
 const caption =
-    document.getElementById("caption");
+    document.getElementById(
+        "caption"
+    );
+
 
 const captionText =
-    document.getElementById("captionText");
+    document.getElementById(
+        "captionText"
+    );
 
 
 /* =========================================================
@@ -384,7 +544,19 @@ let waitingForSpellingWord = false;
 
 let lastFinalSentence = "";
 
+
+/*
+   After this much silence,
+   remove the caption.
+*/
+
 const SILENCE_DELAY = 1800;
+
+
+/*
+   Never make the font smaller
+   than this.
+*/
 
 const MIN_FONT_SIZE = 35;
 
@@ -394,12 +566,14 @@ const MIN_FONT_SIZE = 35;
 ========================================================= */
 
 function setStatus(message) {
-    status.textContent = message;
+
+    status.textContent =
+        message;
 }
 
 
 /* =========================================================
-   CAPTION
+   CLEAR CAPTION
 ========================================================= */
 
 function clearCaption() {
@@ -416,11 +590,17 @@ function clearCaption() {
 
     captionText.textContent = "";
 
-    captionText.classList.add("hidden");
+    captionText.classList.add(
+        "hidden"
+    );
 
-    captionText.classList.remove("interim");
+    captionText.classList.remove(
+        "interim"
+    );
 
-    captionText.classList.remove("spelling");
+    captionText.classList.remove(
+        "spelling"
+    );
 
     cancelSilenceTimer();
 
@@ -428,6 +608,10 @@ function clearCaption() {
         sizeSelect.value + "px";
 }
 
+
+/* =========================================================
+   SHOW / HIDE
+========================================================= */
 
 function showCaption() {
 
@@ -451,9 +635,13 @@ function hideCaption() {
 
 function cancelSilenceTimer() {
 
-    if (silenceTimer !== null) {
+    if (
+        silenceTimer !== null
+    ) {
 
-        clearTimeout(silenceTimer);
+        clearTimeout(
+            silenceTimer
+        );
 
         silenceTimer = null;
     }
@@ -464,45 +652,39 @@ function startSilenceTimer() {
 
     cancelSilenceTimer();
 
-    silenceTimer = setTimeout(
-        function() {
 
-            finalCaption = "";
+    silenceTimer =
+        setTimeout(
+            function() {
 
-            interimCaption = "";
+                finalCaption = "";
 
-            spellingMode = false;
+                interimCaption = "";
 
-            waitingForSpellingWord = false;
+                spellingMode = false;
 
-            lastFinalSentence = "";
+                waitingForSpellingWord = false;
 
-            captionText.textContent = "";
+                lastFinalSentence = "";
 
-            captionText.classList.remove(
-                "interim"
-            );
+                captionText.textContent = "";
 
-            captionText.classList.remove(
-                "spelling"
-            );
+                hideCaption();
 
-            hideCaption();
+                caption.style.fontSize =
+                    sizeSelect.value + "px";
 
-            caption.style.fontSize =
-                sizeSelect.value + "px";
+                silenceTimer = null;
 
-            silenceTimer = null;
+            },
 
-        },
-
-        SILENCE_DELAY
-    );
+            SILENCE_DELAY
+        );
 }
 
 
 /* =========================================================
-   FILLERS
+   REMOVE FILLER WORDS
 ========================================================= */
 
 function removeFillers(text) {
@@ -524,7 +706,7 @@ function removeFillers(text) {
 
 
 /* =========================================================
-   REPEATED WORDS
+   REMOVE IMMEDIATE REPEATS
 ========================================================= */
 
 function removeImmediateRepeats(text) {
@@ -535,7 +717,9 @@ function removeImmediateRepeats(text) {
     const result = [];
 
 
-    for (const word of words) {
+    for (
+        const word of words
+    ) {
 
         const current =
             word
@@ -548,7 +732,10 @@ function removeImmediateRepeats(text) {
 
         const previous =
             result.length
-                ? result[
+
+                ?
+
+                result[
                     result.length - 1
                 ]
                     .toLowerCase()
@@ -556,7 +743,10 @@ function removeImmediateRepeats(text) {
                         /[.,!?;:"'()[\]{}-]/g,
                         ""
                     )
-                : "";
+
+                :
+
+                "";
 
 
         if (
@@ -578,128 +768,173 @@ function removeImmediateRepeats(text) {
 
 /* =========================================================
    SPOKEN PUNCTUATION
+
+   We DO NOT automatically turn sentences
+   into questions.
+
+   If Chrome provides punctuation,
+   we keep it.
+
+   If the speaker explicitly says
+   "question mark", it becomes ?.
 ========================================================= */
 
 function convertSpokenPunctuation(text) {
 
-    let t = text;
+    return text
 
+        .replace(
+            /\bquestion mark\b/gi,
+            "?"
+        )
 
-    const replacements = [
+        .replace(
+            /\bexclamation mark\b/gi,
+            "!"
+        )
 
-        [/\bnew paragraph\b/gi, "\n\n"],
+        .replace(
+            /\bexclamation point\b/gi,
+            "!"
+        )
 
-        [/\bnew line\b/gi, "\n"],
+        .replace(
+            /\bcomma\b/gi,
+            ","
+        )
 
-        [/\bquestion mark\b/gi, "?"],
+        .replace(
+            /\bfull stop\b/gi,
+            "."
+        )
 
-        [/\bexclamation mark\b/gi, "!"],
+        .replace(
+            /\bperiod\b/gi,
+            "."
+        )
 
-        [/\bexclamation point\b/gi, "!"],
+        .replace(
+            /\bcolon\b/gi,
+            ":"
+        )
 
-        [/\bcomma\b/gi, ","],
+        .replace(
+            /\bsemicolon\b/gi,
+            ";"
+        )
 
-        [/\bfull stop\b/gi, "."],
+        .replace(
+            /\bnew line\b/gi,
+            "\n"
+        )
 
-        [/\bperiod\b/gi, "."],
-
-        [/\bcolon\b/gi, ":"],
-
-        [/\bsemicolon\b/gi, ";"],
-
-        [/\bopen parenthesis\b/gi, "("],
-
-        [/\bclose parenthesis\b/gi, ")"]
-    ];
-
-
-    for (
-        const [pattern, replacement]
-        of replacements
-    ) {
-
-        t =
-            t.replace(
-                pattern,
-                replacement
-            );
-    }
-
-
-    return t;
+        .replace(
+            /\bnew paragraph\b/gi,
+            "\n\n"
+        );
 }
 
 
 /* =========================================================
-   NUMBER TABLES
+   YEAR RECOGNITION
+
+   Important:
+
+   "one" stays "one"
+
+   "only one" stays "only one"
+
+   "twenty twenty-seven"
+   becomes:
+
+   2027
+
+   "twenty twenty-six"
+   becomes:
+
+   2026
 ========================================================= */
 
-const numberUnits = {
+const units = {
 
     zero: 0,
+
     one: 1,
+
     two: 2,
+
     three: 3,
+
     four: 4,
+
     five: 5,
+
     six: 6,
+
     seven: 7,
+
     eight: 8,
+
     nine: 9,
+
     ten: 10,
+
     eleven: 11,
+
     twelve: 12,
+
     thirteen: 13,
+
     fourteen: 14,
+
     fifteen: 15,
+
     sixteen: 16,
+
     seventeen: 17,
+
     eighteen: 18,
+
     nineteen: 19
 };
 
 
-const numberTens = {
+const tens = {
 
     twenty: 20,
+
     thirty: 30,
+
     forty: 40,
+
     fifty: 50,
+
     sixty: 60,
+
     seventy: 70,
+
     eighty: 80,
+
     ninety: 90
 };
 
 
-/* =========================================================
-   YEAR CONVERSION
-
-   Examples:
-
-   twenty twenty-six → 2026
-   twenty twenty-seven → 2027
-   nineteen ninety-five → 1995
-
-   Ordinary "one" remains "one".
-========================================================= */
-
 function convertYears(text) {
 
-    const tokens =
+    const words =
         text.split(/\s+/);
 
-    const result = [];
+    const output = [];
 
     let i = 0;
 
 
     while (
-        i < tokens.length
+        i < words.length
     ) {
 
         const first =
-            tokens[i]
+            words[i]
                 .toLowerCase()
                 .replace(
                     /[^a-z]/g,
@@ -707,7 +942,9 @@ function convertYears(text) {
                 );
 
 
-        /* 2020–2029 */
+        /*
+           2020–2029
+        */
 
         if (
 
@@ -715,12 +952,13 @@ function convertYears(text) {
 
             &&
 
-            i + 1 < tokens.length
+            i + 1 <
+            words.length
 
         ) {
 
             const second =
-                tokens[i + 1]
+                words[i + 1]
                     .toLowerCase()
                     .replace(
                         /[^a-z]/g,
@@ -728,35 +966,20 @@ function convertYears(text) {
                     );
 
 
-            let value = null;
-
-
             if (
-                numberUnits[second] !== undefined
+                units[second] !== undefined
             ) {
 
-                value =
-                    numberUnits[second];
-
-            } else if (
-                numberTens[second] !== undefined
-            ) {
-
-                value =
-                    numberTens[second];
-            }
+                const number =
+                    units[second];
 
 
-            if (
-                value !== null &&
-                value <= 99
-            ) {
-
-                result.push(
+                output.push(
                     String(
-                        2000 + value
+                        2000 + number
                     )
                 );
+
 
                 i += 2;
 
@@ -765,7 +988,9 @@ function convertYears(text) {
         }
 
 
-        /* 1900–1999 */
+        /*
+           1900–1999
+        */
 
         if (
 
@@ -773,12 +998,13 @@ function convertYears(text) {
 
             &&
 
-            i + 1 < tokens.length
+            i + 1 <
+            words.length
 
         ) {
 
             const second =
-                tokens[i + 1]
+                words[i + 1]
                     .toLowerCase()
                     .replace(
                         /[^a-z]/g,
@@ -786,35 +1012,20 @@ function convertYears(text) {
                     );
 
 
-            let value = null;
-
-
             if (
-                numberUnits[second] !== undefined
+                units[second] !== undefined
             ) {
 
-                value =
-                    numberUnits[second];
-
-            } else if (
-                numberTens[second] !== undefined
-            ) {
-
-                value =
-                    numberTens[second];
-            }
+                const number =
+                    units[second];
 
 
-            if (
-                value !== null &&
-                value <= 99
-            ) {
-
-                result.push(
+                output.push(
                     String(
-                        1900 + value
+                        1900 + number
                     )
                 );
+
 
                 i += 2;
 
@@ -823,15 +1034,20 @@ function convertYears(text) {
         }
 
 
-        result.push(
-            tokens[i]
+        /*
+           Everything else stays exactly
+           as Chrome recognized it.
+        */
+
+        output.push(
+            words[i]
         );
 
         i++;
     }
 
 
-    return result.join(" ");
+    return output.join(" ");
 }
 
 
@@ -839,53 +1055,46 @@ function convertYears(text) {
    NORMAL SPEECH
 ========================================================= */
 
-function processNormalSpeech(text) {
+function processSpeech(text) {
 
     if (!text) {
+
         return "";
     }
 
 
-    let t =
+    let result =
         text.trim();
 
 
-    t =
-        removeFillers(t);
+    result =
+        removeFillers(
+            result
+        );
 
 
-    t =
-        removeImmediateRepeats(t);
+    result =
+        removeImmediateRepeats(
+            result
+        );
 
 
-    t =
-        convertSpokenPunctuation(t);
+    result =
+        convertSpokenPunctuation(
+            result
+        );
 
 
-    /*
-       Only convert recognizable years.
-
-       DO NOT convert:
-
-       one → 1
-       two → 2
-       three → 3
-
-       because ordinary English would be damaged.
-    */
-
-    t =
-        convertYears(t);
+    result =
+        convertYears(
+            result
+        );
 
 
-    t =
-        t
+    result =
+        result
             .replace(
-                /\s+([,.!?;:)\]}])/g,
-                "$1"
-            )
-            .replace(
-                /([(\[])\s+/g,
+                /\s+([,.!?;:])/g,
                 "$1"
             )
             .replace(
@@ -896,24 +1105,19 @@ function processNormalSpeech(text) {
 
 
     /*
-       NO AUTOMATIC QUESTION MARK.
+       IMPORTANT:
 
-       Chrome's original punctuation is respected.
+       We do NOT add question marks.
 
-       Therefore:
+       We do NOT convert "one" to "1".
 
-       "What is your name"
+       We do NOT convert ordinary numbers.
 
-       will NOT automatically become:
-
-       "What is your name?"
-
-       unless Chrome actually returns
-       the punctuation or you explicitly
-       say "question mark".
+       Chrome's recognition remains the primary
+       transcription source.
     */
 
-    return t;
+    return result;
 }
 
 
@@ -933,6 +1137,7 @@ function spellWord(word) {
 
 
     if (!clean) {
+
         return "";
     }
 
@@ -943,85 +1148,48 @@ function spellWord(word) {
 }
 
 
-function extractSpellCommand(text) {
+function processSpelling(text) {
 
-    const cleaned =
+    const clean =
         text
             .trim()
             .replace(
-                /[.!?]+$/g,
+                /[.!?]+$/,
                 ""
             )
             .trim();
 
 
-    const match =
-        cleaned.match(
+    /*
+       "spell apple"
+    */
+
+    const direct =
+        clean.match(
             /^(?:please\s+)?spell(?:\s+the\s+word)?\s+([A-Za-z]+)$/i
         );
 
 
-    if (!match) {
-        return null;
-    }
-
-
-    return match[1];
-}
-
-
-function isSpellCommand(text) {
-
-    const cleaned =
-        text
-            .trim()
-            .replace(
-                /[.!?]+$/g,
-                ""
-            )
-            .trim()
-            .toLowerCase();
-
-
-    return (
-        cleaned === "spell" ||
-        cleaned === "please spell"
-    );
-}
-
-
-function processSpelling(text) {
-
-    const cleaned =
-        text
-            .trim()
-            .replace(
-                /[.!?]+$/g,
-                ""
-            )
-            .trim();
-
-
-    const directWord =
-        extractSpellCommand(
-            cleaned
-        );
-
-
-    if (directWord) {
+    if (direct) {
 
         spellingMode = false;
 
         waitingForSpellingWord = false;
 
         return spellWord(
-            directWord
+            direct[1]
         );
     }
 
 
+    /*
+       "spell"
+    */
+
     if (
-        isSpellCommand(cleaned)
+        /^(please\s+)?spell$/i.test(
+            clean
+        )
     ) {
 
         spellingMode = true;
@@ -1032,6 +1200,10 @@ function processSpelling(text) {
     }
 
 
+    /*
+       Word after "spell"
+    */
+
     if (
 
         spellingMode &&
@@ -1039,28 +1211,19 @@ function processSpelling(text) {
 
     ) {
 
-        const words =
-            cleaned.split(/\s+/);
-
-
         if (
-            words.length === 1
+            /^[A-Za-z]+$/.test(
+                clean
+            )
         ) {
 
-            const word =
-                words[0];
+            spellingMode = false;
 
+            waitingForSpellingWord = false;
 
-            if (
-                /^[A-Za-z]+$/.test(word)
-            ) {
-
-                spellingMode = false;
-
-                waitingForSpellingWord = false;
-
-                return spellWord(word);
-            }
+            return spellWord(
+                clean
+            );
         }
 
 
@@ -1076,6 +1239,8 @@ function processSpelling(text) {
 
 /* =========================================================
    FONT FITTING
+
+   Keep caption within TWO lines.
 ========================================================= */
 
 function fitCaption() {
@@ -1098,39 +1263,20 @@ function fitCaption() {
         fontSize + "px";
 
 
-    /*
-       Allow exactly two lines.
-    */
-
-    captionText.style.maxHeight =
-        (fontSize * 1.12 * 2) + "px";
-
-
-    /*
-       Gradually reduce font until
-       the text fits within two lines.
-    */
-
     while (
-
         captionText.scrollHeight >
-        captionText.clientHeight
+        fontSize * 1.12 * 2
 
         &&
 
-        fontSize > MIN_FONT_SIZE
-
+        fontSize >
+        MIN_FONT_SIZE
     ) {
 
         fontSize -= 2;
 
-
         caption.style.fontSize =
             fontSize + "px";
-
-
-        captionText.style.maxHeight =
-            (fontSize * 1.12 * 2) + "px";
     }
 }
 
@@ -1141,7 +1287,7 @@ function fitCaption() {
 
 function renderCaption() {
 
-    const display =
+    const text =
         [
             finalCaption,
             interimCaption
@@ -1151,7 +1297,7 @@ function renderCaption() {
             .trim();
 
 
-    if (!display) {
+    if (!text) {
 
         captionText.textContent = "";
 
@@ -1162,12 +1308,14 @@ function renderCaption() {
 
 
     captionText.textContent =
-        display;
+        text;
 
 
     captionText.classList.toggle(
         "interim",
-        Boolean(interimCaption)
+        Boolean(
+            interimCaption
+        )
     );
 
 
@@ -1194,20 +1342,24 @@ function addFinalSpeech(text) {
     }
 
 
-    const spellingResult =
-        processSpelling(text);
+    /*
+       Check spelling first.
+    */
+
+    const spelling =
+        processSpelling(
+            text
+        );
 
 
     if (
-        spellingResult !== null
+        spelling !== null
     ) {
 
-        if (
-            spellingResult
-        ) {
+        if (spelling) {
 
             finalCaption =
-                spellingResult;
+                spelling;
 
             interimCaption = "";
 
@@ -1222,6 +1374,11 @@ function addFinalSpeech(text) {
     }
 
 
+    /*
+       If waiting for spelling,
+       don't show "spell" itself.
+    */
+
     if (
         spellingMode &&
         waitingForSpellingWord
@@ -1232,22 +1389,13 @@ function addFinalSpeech(text) {
 
 
     const processed =
-        processNormalSpeech(text);
+        processSpeech(
+            text
+        );
 
 
     if (
-        !processed.trim()
-    ) {
-
-        return;
-    }
-
-
-    if (
-
-        processed.toLowerCase() ===
-        lastFinalSentence.toLowerCase()
-
+        !processed
     ) {
 
         return;
@@ -1255,14 +1403,34 @@ function addFinalSpeech(text) {
 
 
     /*
-       Show the current sentence rather than
-       accumulating the entire speech.
+       Don't repeat exactly the same
+       recognition result.
+    */
+
+    if (
+        processed.toLowerCase() ===
+        lastFinalSentence.toLowerCase()
+    ) {
+
+        return;
+    }
+
+
+    /*
+       IMPORTANT:
+
+       Only show the CURRENT caption.
+
+       We do NOT keep adding every sentence
+       to one enormous paragraph.
     */
 
     finalCaption =
         processed;
 
+
     interimCaption = "";
+
 
     lastFinalSentence =
         processed;
@@ -1278,7 +1446,7 @@ function addFinalSpeech(text) {
 
 
 /* =========================================================
-   SPEECH RECOGNITION
+   CREATE SPEECH RECOGNITION
 ========================================================= */
 
 if (!SpeechRecognition) {
@@ -1297,15 +1465,25 @@ if (!SpeechRecognition) {
         new SpeechRecognition();
 
 
-    recognition.continuous = true;
+    recognition.continuous =
+        true;
 
-    recognition.interimResults = true;
 
-    recognition.maxAlternatives = 1;
+    recognition.interimResults =
+        true;
+
+
+    recognition.maxAlternatives =
+        1;
+
 
     recognition.lang =
         languageSelect.value;
 
+
+    /* =====================================================
+       START
+    ===================================================== */
 
     recognition.onstart =
         function() {
@@ -1321,6 +1499,10 @@ if (!SpeechRecognition) {
             );
         };
 
+
+    /* =====================================================
+       RESULT
+    ===================================================== */
 
     recognition.onresult =
         function(event) {
@@ -1356,6 +1538,7 @@ if (!SpeechRecognition) {
 
 
                 if (!transcript) {
+
                     continue;
                 }
 
@@ -1377,6 +1560,10 @@ if (!SpeechRecognition) {
             }
 
 
+            /*
+               FINAL SPEECH
+            */
+
             if (
                 finalText.trim()
             ) {
@@ -1389,6 +1576,10 @@ if (!SpeechRecognition) {
             }
 
 
+            /*
+               INTERIM SPEECH
+            */
+
             if (
 
                 interimText.trim()
@@ -1400,7 +1591,7 @@ if (!SpeechRecognition) {
             ) {
 
                 interimCaption =
-                    processNormalSpeech(
+                    processSpeech(
                         interimText.trim()
                     );
 
@@ -1414,12 +1605,17 @@ if (!SpeechRecognition) {
         };
 
 
+    /* =====================================================
+       ERRORS
+    ===================================================== */
+
     recognition.onerror =
         function(event) {
 
             if (
 
-                event.error === "not-allowed"
+                event.error ===
+                "not-allowed"
 
                 ||
 
@@ -1490,6 +1686,10 @@ if (!SpeechRecognition) {
         };
 
 
+    /* =====================================================
+       END / AUTOMATIC RESTART
+    ===================================================== */
+
     recognition.onend =
         function() {
 
@@ -1515,6 +1715,7 @@ if (!SpeechRecognition) {
                             !listening ||
                             manuallyStopped
                         ) {
+
                             return;
                         }
 
@@ -1557,7 +1758,7 @@ if (!SpeechRecognition) {
 
 
 /* =========================================================
-   START
+   START BUTTON
 ========================================================= */
 
 startBtn.addEventListener(
@@ -1567,7 +1768,7 @@ startBtn.addEventListener(
         if (!recognition) {
 
             setStatus(
-                "Speech recognition is unavailable."
+                "Speech recognition unavailable."
             );
 
             return;
@@ -1575,6 +1776,7 @@ startBtn.addEventListener(
 
 
         if (listening) {
+
             return;
         }
 
@@ -1604,7 +1806,7 @@ startBtn.addEventListener(
 
 
 /* =========================================================
-   STOP
+   STOP BUTTON
 ========================================================= */
 
 stopBtn.addEventListener(
@@ -1621,6 +1823,7 @@ stopBtn.addEventListener(
 
         interimCaption = "";
 
+
         spellingMode = false;
 
         waitingForSpellingWord = false;
@@ -1629,7 +1832,9 @@ stopBtn.addEventListener(
         if (recognition) {
 
             try {
+
                 recognition.stop();
+
             } catch (error) {}
         }
 
@@ -1650,7 +1855,7 @@ stopBtn.addEventListener(
 
 
 /* =========================================================
-   CLEAR
+   CLEAR BUTTON
 ========================================================= */
 
 clearBtn.addEventListener(
@@ -1670,7 +1875,7 @@ clearBtn.addEventListener(
 
 
 /* =========================================================
-   FONT SIZE
+   SIZE
 ========================================================= */
 
 sizeSelect.addEventListener(
@@ -1679,6 +1884,7 @@ sizeSelect.addEventListener(
 
         caption.style.fontSize =
             sizeSelect.value + "px";
+
 
         requestAnimationFrame(
             fitCaption
@@ -1696,6 +1902,7 @@ languageSelect.addEventListener(
     function() {
 
         if (!recognition) {
+
             return;
         }
 
@@ -1707,7 +1914,9 @@ languageSelect.addEventListener(
         if (listening) {
 
             try {
+
                 recognition.stop();
+
             } catch (error) {}
         }
     }
@@ -1731,9 +1940,13 @@ fullscreenBtn.addEventListener(
                 await document.documentElement
                     .requestFullscreen();
 
+
                 document
-                    .getElementById("controls")
-                    .style.display = "none";
+                    .getElementById(
+                        "controls"
+                    )
+                    .style.display =
+                    "none";
 
             } else {
 
@@ -1781,7 +1994,7 @@ document.addEventListener(
 
 
 /* =========================================================
-   RESIZE
+   WINDOW RESIZE
 ========================================================= */
 
 window.addEventListener(
@@ -1800,9 +2013,11 @@ window.addEventListener(
 caption.style.fontSize =
     sizeSelect.value + "px";
 
+
 hideCaption();
 
 </script>
 
 </body>
+
 </html>
