@@ -3,11 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Classroom Live Caption</title>
 
 <style>
-
 * {
     box-sizing: border-box;
 }
@@ -26,102 +24,73 @@ body {
     overflow: hidden;
 }
 
-
-/* =========================================================
-   CONTROL BAR
-   ========================================================= */
+/* =========================
+   CONTROLS
+========================= */
 
 #controls {
-
     position: fixed;
-
     top: 0;
     left: 0;
-
     width: 100%;
-
     z-index: 100;
 
     display: flex;
-
     align-items: center;
-
     gap: 8px;
 
     padding: 10px 12px;
 
     background: #181818;
-
     border-bottom: 1px solid #444;
 
     flex-wrap: wrap;
 }
 
-
 button,
 select {
-
     font-family: Arial, Helvetica, sans-serif;
-
     font-size: 15px;
 
     padding: 9px 12px;
 
     border: 1px solid #666;
-
     border-radius: 6px;
 
     background: #292929;
-
     color: #fff;
 
     cursor: pointer;
 }
 
-
 button:hover,
 select:hover {
-
     background: #383838;
 }
 
-
 button:disabled {
-
     opacity: 0.45;
-
     cursor: default;
 }
 
-
 label {
-
     display: flex;
-
     align-items: center;
-
     gap: 5px;
-
     font-size: 14px;
 }
-
 
 #status {
-
     margin-left: auto;
-
     color: #aaa;
-
     font-size: 14px;
 }
 
-
-/* =========================================================
-   CAPTION SCREEN
-   ========================================================= */
+/* =========================
+   CAPTION AREA
+========================= */
 
 #captionArea {
-
     position: fixed;
 
     top: 0;
@@ -133,168 +102,114 @@ label {
     display: flex;
 
     align-items: flex-end;
-
     justify-content: center;
 
-    padding:
-
-        0
-        6vw
-        8vh
-        6vw;
+    padding: 0 6vw 8vh 6vw;
 
     pointer-events: none;
 }
 
-
-/* =========================================================
-   CAPTION CONTAINER
-
-   THIS IS THE IMPORTANT PART.
-
-   The caption itself is only a small area near
-   the bottom of the screen.
-
-   It does NOT occupy the whole screen.
-   ========================================================= */
-
 #caption {
-
     width: 100%;
-
     max-width: 1600px;
 
     display: flex;
-
     justify-content: center;
-
     align-items: center;
 
     text-align: center;
 }
 
-
-/* =========================================================
+/* =========================
    CAPTION TEXT
 
-   Maximum TWO lines.
-   ========================================================= */
+   MAXIMUM TWO LINES
+========================= */
 
 #captionText {
-
     display: -webkit-box;
 
     -webkit-box-orient: vertical;
-
     -webkit-line-clamp: 2;
 
     overflow: hidden;
 
     width: 100%;
-
     max-width: 1600px;
 
     max-height: 2.35em;
 
     font-size: 90px;
-
     font-weight: 700;
 
     line-height: 1.12;
 
     text-align: center;
 
+    white-space: normal;
     overflow-wrap: normal;
-
     word-break: normal;
 
-    white-space: normal;
-
     text-shadow:
-
         2px 2px 4px #000,
-
         -2px -2px 4px #000,
-
         2px -2px 4px #000,
-
         -2px 2px 4px #000;
 }
 
-
 #captionText.interim {
-
     opacity: 0.72;
 }
 
-
 #captionText.spelling {
-
     font-weight: 900;
-
     letter-spacing: 0.08em;
-
     text-transform: uppercase;
 }
 
-
 .hidden {
-
     visibility: hidden;
 }
 
-
-/* =========================================================
+/* =========================
    MOBILE
-   ========================================================= */
+========================= */
 
 @media (max-width: 700px) {
 
     #controls {
-
         padding: 8px;
     }
 
     button,
     select {
-
         font-size: 14px;
-
         padding: 8px 10px;
     }
 
     #status {
-
         width: 100%;
-
         margin-left: 0;
     }
 
     #captionArea {
-
         padding-left: 4vw;
-
         padding-right: 4vw;
-
         padding-bottom: 7vh;
     }
 
     #captionText {
-
         font-size: 55px;
     }
 }
-
 </style>
 </head>
 
-
 <body>
 
-
-<!-- =====================================================
+<!-- =========================
      CONTROLS
-     ===================================================== -->
+========================= -->
 
 <div id="controls">
 
@@ -315,11 +230,9 @@ label {
     </button>
 
     <label>
-
         Size:
 
         <select id="sizeSelect">
-
             <option value="50">50</option>
             <option value="60">60</option>
             <option value="70">70</option>
@@ -328,30 +241,17 @@ label {
             <option value="100">100</option>
             <option value="110">110</option>
             <option value="120">120</option>
-
         </select>
-
     </label>
 
-
     <label>
-
         Language:
 
         <select id="languageSelect">
-
-            <option value="en-US">
-                English
-            </option>
-
-            <option value="th-TH">
-                Thai
-            </option>
-
+            <option value="en-US">English</option>
+            <option value="th-TH">Thai</option>
         </select>
-
     </label>
-
 
     <span id="status">
         Ready
@@ -360,18 +260,15 @@ label {
 </div>
 
 
-<!-- =====================================================
+<!-- =========================
      CAPTION
-     ===================================================== -->
+========================= -->
 
 <main id="captionArea">
 
     <div id="caption">
 
-        <div
-            id="captionText"
-            class="hidden">
-        </div>
+        <div id="captionText" class="hidden"></div>
 
     </div>
 
@@ -385,7 +282,7 @@ label {
 
 /* =========================================================
    SPEECH RECOGNITION
-   ========================================================= */
+========================================================= */
 
 const SpeechRecognition =
     window.SpeechRecognition ||
@@ -394,7 +291,7 @@ const SpeechRecognition =
 
 /* =========================================================
    ELEMENTS
-   ========================================================= */
+========================================================= */
 
 const startBtn =
     document.getElementById("startBtn");
@@ -423,7 +320,7 @@ const captionText =
 
 /* =========================================================
    STATE
-   ========================================================= */
+========================================================= */
 
 let recognition = null;
 
@@ -435,59 +332,42 @@ let restarting = false;
 
 let silenceTimer = null;
 
-let finalSentence = "";
-
-let interimSentence = "";
-
 let spellingMode = false;
 
 let waitingForSpellingWord = false;
-
 
 const SILENCE_DELAY = 1800;
 
 
 /* =========================================================
    STATUS
-   ========================================================= */
+========================================================= */
 
 function setStatus(text) {
-
     status.textContent = text;
 }
 
 
 /* =========================================================
-   SHOW / HIDE
-   ========================================================= */
+   CAPTION VISIBILITY
+========================================================= */
 
 function showCaption() {
-
-    captionText.classList.remove(
-        "hidden"
-    );
+    captionText.classList.remove("hidden");
 }
 
-
 function hideCaption() {
-
-    captionText.classList.add(
-        "hidden"
-    );
+    captionText.classList.add("hidden");
 }
 
 
 /* =========================================================
-   CLEAR CAPTION
-   ========================================================= */
+   CLEAR
+========================================================= */
 
 function clearCaption() {
 
     cancelSilenceTimer();
-
-    finalSentence = "";
-
-    interimSentence = "";
 
     spellingMode = false;
 
@@ -495,13 +375,9 @@ function clearCaption() {
 
     captionText.textContent = "";
 
-    captionText.classList.remove(
-        "interim"
-    );
+    captionText.classList.remove("interim");
 
-    captionText.classList.remove(
-        "spelling"
-    );
+    captionText.classList.remove("spelling");
 
     hideCaption();
 }
@@ -509,15 +385,13 @@ function clearCaption() {
 
 /* =========================================================
    SILENCE TIMER
-   ========================================================= */
+========================================================= */
 
 function cancelSilenceTimer() {
 
     if (silenceTimer !== null) {
 
-        clearTimeout(
-            silenceTimer
-        );
+        clearTimeout(silenceTimer);
 
         silenceTimer = null;
     }
@@ -528,113 +402,71 @@ function startSilenceTimer() {
 
     cancelSilenceTimer();
 
-    silenceTimer = setTimeout(
-        function () {
+    silenceTimer = setTimeout(function() {
 
-            /*
-               When the teacher stops talking,
-               remove the caption.
+        captionText.textContent = "";
 
-               This prevents old sentences from
-               remaining on the screen.
-            */
+        captionText.classList.remove("interim");
 
-            finalSentence = "";
+        captionText.classList.remove("spelling");
 
-            interimSentence = "";
+        hideCaption();
 
-            captionText.textContent = "";
+        silenceTimer = null;
 
-            captionText.classList.remove(
-                "interim"
-            );
-
-            captionText.classList.remove(
-                "spelling"
-            );
-
-            hideCaption();
-
-            silenceTimer = null;
-
-        },
-        SILENCE_DELAY
-    );
+    }, SILENCE_DELAY);
 }
 
 
 /* =========================================================
    FILLER WORDS
-   ========================================================= */
+========================================================= */
 
 function removeFillers(text) {
 
     return text
-
         .replace(
             /\b(um+|uh+|erm+|er+|hmm+|mm+)\b/gi,
             ""
         )
-
-        .replace(
-            /\s{2,}/g,
-            " "
-        )
-
+        .replace(/\s{2,}/g, " ")
         .trim();
 }
 
 
 /* =========================================================
    REPEATED WORDS
-   ========================================================= */
+========================================================= */
 
 function removeImmediateRepeats(text) {
 
-    const words =
-        text.split(/\s+/);
+    const words = text.split(/\s+/);
 
     const result = [];
 
+    for (const word of words) {
 
-    for (
-        const word of words
-    ) {
-
-        const clean =
+        const current =
             word
                 .toLowerCase()
-                .replace(
-                    /[.,!?;:"'()[\]{}-]/g,
-                    ""
-                );
-
+                .replace(/[.,!?;:"'()[\]{}-]/g, "");
 
         const previous =
             result.length
-                ? result[
-                    result.length - 1
-                ]
+                ? result[result.length - 1]
                     .toLowerCase()
-                    .replace(
-                        /[.,!?;:"'()[\]{}-]/g,
-                        ""
-                    )
+                    .replace(/[.,!?;:"'()[\]{}-]/g, "")
                 : "";
 
-
         if (
-            clean &&
-            clean === previous
+            current &&
+            current === previous
         ) {
-
             continue;
         }
 
-
         result.push(word);
     }
-
 
     return result.join(" ");
 }
@@ -642,72 +474,40 @@ function removeImmediateRepeats(text) {
 
 /* =========================================================
    SPOKEN PUNCTUATION
-   ========================================================= */
+
+   NOTE:
+   We are NOT requiring the speaker to say
+   "question mark" for normal questions.
+
+   The program can infer basic questions.
+========================================================= */
 
 function convertSpokenPunctuation(text) {
 
     let t = text;
 
-
     const replacements = [
 
-        [
-            /\bnew paragraph\b/gi,
-            "\n\n"
-        ],
+        [/\bnew paragraph\b/gi, "\n\n"],
+        [/\bnew line\b/gi, "\n"],
 
-        [
-            /\bnew line\b/gi,
-            "\n"
-        ],
+        [/\bquestion mark\b/gi, "?"],
+        [/\bexclamation mark\b/gi, "!"],
+        [/\bexclamation point\b/gi, "!"],
 
-        [
-            /\bquestion mark\b/gi,
-            "?"
-        ],
+        [/\bcomma\b/gi, ","],
+        [/\bfull stop\b/gi, "."],
+        [/\bperiod\b/gi, "."],
 
-        [
-            /\bexclamation mark\b/gi,
-            "!"
-        ],
+        [/\bcolon\b/gi, ":"],
+        [/\bsemicolon\b/gi, ";"],
 
-        [
-            /\bexclamation point\b/gi,
-            "!"
-        ],
-
-        [
-            /\bcomma\b/gi,
-            ","
-        ],
-
-        [
-            /\bfull stop\b/gi,
-            "."
-        ],
-
-        [
-            /\bperiod\b/gi,
-            "."
-        ],
-
-        [
-            /\bcolon\b/gi,
-            ":"
-        ],
-
-        [
-            /\bsemicolon\b/gi,
-            ";"
-        ]
+        [/\bopen parenthesis\b/gi, "("],
+        [/\bclose parenthesis\b/gi, ")"]
     ];
 
-
     for (
-        const [
-            pattern,
-            replacement
-        ]
+        const [pattern, replacement]
         of replacements
     ) {
 
@@ -718,17 +518,15 @@ function convertSpokenPunctuation(text) {
             );
     }
 
-
     return t;
 }
 
 
 /* =========================================================
-   NUMBER CONVERSION
-   ========================================================= */
+   NUMBER WORDS
+========================================================= */
 
-const numberUnits = {
-
+const units = {
     zero: 0,
     one: 1,
     two: 2,
@@ -749,12 +547,10 @@ const numberUnits = {
     seventeen: 17,
     eighteen: 18,
     nineteen: 19
-
 };
 
 
-const numberTens = {
-
+const tens = {
     twenty: 20,
     thirty: 30,
     forty: 40,
@@ -763,11 +559,14 @@ const numberTens = {
     seventy: 70,
     eighty: 80,
     ninety: 90
-
 };
 
 
-function wordsToNumber(words) {
+/* =========================================================
+   NUMBER WORD → VALUE
+========================================================= */
+
+function numberWordsToValue(words) {
 
     let total = 0;
 
@@ -775,30 +574,23 @@ function wordsToNumber(words) {
 
     let found = false;
 
-
-    for (
-        const word of words
-    ) {
+    for (const word of words) {
 
         if (
-            numberUnits[word]
-            !== undefined
+            units[word] !== undefined
         ) {
 
-            current +=
-                numberUnits[word];
+            current += units[word];
 
             found = true;
 
         }
 
         else if (
-            numberTens[word]
-            !== undefined
+            tens[word] !== undefined
         ) {
 
-            current +=
-                numberTens[word];
+            current += tens[word];
 
             found = true;
 
@@ -808,14 +600,27 @@ function wordsToNumber(words) {
             word === "hundred"
         ) {
 
-            if (
-                current === 0
-            ) {
-
+            if (current === 0) {
                 current = 1;
             }
 
             current *= 100;
+
+            found = true;
+
+        }
+
+        else if (
+            word === "thousand"
+        ) {
+
+            if (current === 0) {
+                current = 1;
+            }
+
+            total += current * 1000;
+
+            current = 0;
 
             found = true;
 
@@ -827,16 +632,31 @@ function wordsToNumber(words) {
         }
     }
 
-
     return found
         ? total + current
         : null;
 }
 
 
-function convertNumbers(text) {
+/* =========================================================
+   YEAR DETECTION
+=========================================================
 
-    const tokens =
+   This is the important new system.
+
+   It recognizes:
+
+   nineteen ninety-five → 1995
+   twenty twenty-six   → 2026
+   twenty twenty-seven → 2027
+   twenty twenty-nine  → 2029
+   two thousand twenty-six → 2026
+
+========================================================= */
+
+function convertYearPhrase(text) {
+
+    const words =
         text.split(/\s+/);
 
     const result = [];
@@ -845,86 +665,181 @@ function convertNumbers(text) {
 
 
     while (
-        i < tokens.length
+        i < words.length
     ) {
 
-        let value = null;
-
-        let lengthFound = 0;
-
-
-        const maximum =
-            Math.min(
-                6,
-                tokens.length - i
-            );
-
-
-        for (
-            let length = maximum;
-            length >= 1;
-            length--
-        ) {
-
-            const candidate =
-                tokens
-                    .slice(
-                        i,
-                        i + length
-                    )
-                    .map(
-                        function (word) {
-
-                            return word
-                                .toLowerCase()
-                                .replace(
-                                    /[^a-z]/g,
-                                    ""
-                                );
-                        }
-                    );
-
-
-            const number =
-                wordsToNumber(
-                    candidate
+        const cleaned =
+            words[i]
+                .toLowerCase()
+                .replace(
+                    /[^a-z]/g,
+                    ""
                 );
 
 
+        /*
+           TWO THOUSAND + YEAR
+        */
+
+        if (
+            cleaned === "two" &&
+            i + 2 < words.length
+        ) {
+
+            const next =
+                words[i + 1]
+                    .toLowerCase()
+                    .replace(
+                        /[^a-z]/g,
+                        ""
+                    );
+
+            const next2 =
+                words[i + 2]
+                    .toLowerCase()
+                    .replace(
+                        /[^a-z]/g,
+                        ""
+                    );
+
+
             if (
-                number !== null
+                next === "thousand" &&
+                (
+                    units[next2] !== undefined ||
+                    tens[next2] !== undefined
+                )
             ) {
 
-                value = number;
+                const last =
+                    numberWordsToValue([
+                        next2
+                    ]);
 
-                lengthFound =
-                    length;
 
-                break;
+                if (
+                    last !== null &&
+                    last >= 0 &&
+                    last <= 99
+                ) {
+
+                    result.push(
+                        String(
+                            2000 + last
+                        )
+                    );
+
+                    i += 3;
+
+                    continue;
+                }
             }
         }
 
 
+        /*
+           TWENTY TWENTY-SIX
+           TWENTY TWENTY-SEVEN
+           etc.
+        */
+
         if (
-            lengthFound > 0
+            cleaned === "twenty" &&
+            i + 1 < words.length
         ) {
 
-            result.push(
-                String(value)
-            );
+            const second =
+                words[i + 1]
+                    .toLowerCase()
+                    .replace(
+                        /[^a-z]/g,
+                        ""
+                    );
 
-            i += lengthFound;
 
+            if (
+                units[second] !== undefined ||
+                tens[second] !== undefined
+            ) {
+
+                const secondValue =
+                    numberWordsToValue([
+                        second
+                    ]);
+
+
+                if (
+                    secondValue !== null &&
+                    secondValue >= 0 &&
+                    secondValue <= 99
+                ) {
+
+                    result.push(
+                        String(
+                            2000 + secondValue
+                        )
+                    );
+
+                    i += 2;
+
+                    continue;
+                }
+            }
         }
 
-        else {
 
-            result.push(
-                tokens[i]
-            );
+        /*
+           NINETEEN NINETY-FIVE
+           NINETEEN NINETY-NINE
+        */
 
-            i++;
+        if (
+            cleaned === "nineteen" &&
+            i + 1 < words.length
+        ) {
+
+            const second =
+                words[i + 1]
+                    .toLowerCase()
+                    .replace(
+                        /[^a-z]/g,
+                        ""
+                    );
+
+
+            if (
+                tens[second] !== undefined ||
+                units[second] !== undefined
+            ) {
+
+                const secondValue =
+                    numberWordsToValue([
+                        second
+                    ]);
+
+
+                if (
+                    secondValue !== null &&
+                    secondValue <= 99
+                ) {
+
+                    result.push(
+                        String(
+                            1900 + secondValue
+                        )
+                    );
+
+                    i += 2;
+
+                    continue;
+                }
+            }
         }
+
+
+        result.push(words[i]);
+
+        i++;
     }
 
 
@@ -933,8 +848,257 @@ function convertNumbers(text) {
 
 
 /* =========================================================
+   ORDINARY NUMBER CONVERSION
+
+   IMPORTANT:
+
+   "one" is NOT automatically converted to "1".
+
+   This is intentional.
+
+   We want:
+
+   "I am not the only one."
+
+   NOT:
+
+   "I am not the only 1."
+
+========================================================= */
+
+function convertOrdinaryNumbers(text) {
+
+    const words =
+        text.split(/\s+/);
+
+    const result = [];
+
+    let i = 0;
+
+
+    while (
+        i < words.length
+    ) {
+
+        const clean =
+            words[i]
+                .toLowerCase()
+                .replace(
+                    /[^a-z]/g,
+                    ""
+                );
+
+
+        /*
+           NEVER convert "one" when it is
+           being used as an ordinary word.
+        */
+
+        if (
+            clean === "one"
+        ) {
+
+            result.push(words[i]);
+
+            i++;
+
+            continue;
+        }
+
+
+        /*
+           Convert numbers beginning at
+           TWO rather than ONE.
+        */
+
+        if (
+            units[clean] !== undefined &&
+            units[clean] >= 2
+        ) {
+
+            result.push(
+                String(
+                    units[clean]
+                )
+            );
+
+            i++;
+
+            continue;
+        }
+
+
+        if (
+            tens[clean] !== undefined
+        ) {
+
+            result.push(
+                String(
+                    tens[clean]
+                )
+            );
+
+            i++;
+
+            continue;
+        }
+
+
+        result.push(words[i]);
+
+        i++;
+    }
+
+
+    return result.join(" ");
+}
+
+
+/* =========================================================
+   CONTEXT-AWARE NUMBER PROCESSING
+========================================================= */
+
+function convertNumbersContextually(text) {
+
+    /*
+       FIRST:
+       Look for recognizable years.
+    */
+
+    let processed =
+        convertYearPhrase(text);
+
+
+    /*
+       SECOND:
+       Convert ordinary numbers.
+
+       "one" is deliberately protected.
+    */
+
+    processed =
+        convertOrdinaryNumbers(
+            processed
+        );
+
+
+    return processed;
+}
+
+
+/* =========================================================
+   QUESTION DETECTION
+=========================================================
+
+   We only add a question mark when the sentence
+   strongly looks like a question.
+
+   We do NOT automatically put ? after every
+   sentence beginning with "what", "how", etc.
+========================================================= */
+
+function addQuestionMark(text) {
+
+    const t =
+        text.trim();
+
+
+    if (!t) {
+        return "";
+    }
+
+
+    if (
+        /[.!?]$/.test(t)
+    ) {
+
+        return t;
+    }
+
+
+    /*
+       Strong question structures.
+    */
+
+    const strongQuestion =
+        /^(who|what|when|where|why|how)\b.+\b(is|are|was|were|do|does|did|can|could|will|would|should|have|has|had)\b/i;
+
+
+    const auxiliaryQuestion =
+        /^(am|is|are|was|were|do|does|did|can|could|will|would|should|shall|may|might|have|has|had)\b/i;
+
+
+    if (
+        strongQuestion.test(t) ||
+        auxiliaryQuestion.test(t)
+    ) {
+
+        return t + "?";
+    }
+
+
+    return t;
+}
+
+
+/* =========================================================
+   NORMAL SPEECH PROCESSING
+========================================================= */
+
+function processSpeech(text) {
+
+    let t =
+        text.trim();
+
+
+    t =
+        removeFillers(t);
+
+
+    t =
+        removeImmediateRepeats(t);
+
+
+    t =
+        convertSpokenPunctuation(t);
+
+
+    /*
+       NEW CONTEXT-AWARE NUMBER SYSTEM
+    */
+
+    t =
+        convertNumbersContextually(t);
+
+
+    t =
+        t
+            .replace(
+                /\s+([,.!?;:)\]}])/g,
+                "$1"
+            )
+            .replace(
+                /([(\[])\s+/g,
+                "$1"
+            )
+            .replace(
+                /\s{2,}/g,
+                " "
+            )
+            .trim();
+
+
+    t =
+        addQuestionMark(t);
+
+
+    return t;
+}
+
+
+/* =========================================================
    SPELLING
-   ========================================================= */
+========================================================= */
 
 function spellWord(word) {
 
@@ -948,7 +1112,6 @@ function spellWord(word) {
 
 
     if (!clean) {
-
         return "";
     }
 
@@ -971,6 +1134,10 @@ function processSpelling(text) {
             .trim();
 
 
+    /*
+       "spell apple"
+    */
+
     const direct =
         cleaned.match(
             /^(?:please\s+)?spell(?:\s+the\s+word)?\s+([A-Za-z]+)$/i
@@ -989,6 +1156,10 @@ function processSpelling(text) {
     }
 
 
+    /*
+       "spell"
+    */
+
     if (
         /^(?:please\s+)?spell$/i
             .test(cleaned)
@@ -1001,6 +1172,10 @@ function processSpelling(text) {
         return "";
     }
 
+
+    /*
+       Word after "spell"
+    */
 
     if (
         spellingMode &&
@@ -1036,66 +1211,18 @@ function processSpelling(text) {
 
 
 /* =========================================================
-   PROCESS SPEECH
-   ========================================================= */
-
-function processSpeech(text) {
-
-    let t = text.trim();
-
-
-    t =
-        removeFillers(t);
-
-
-    t =
-        removeImmediateRepeats(t);
-
-
-    t =
-        convertSpokenPunctuation(t);
-
-
-    t =
-        convertNumbers(t);
-
-
-    t =
-        t
-            .replace(
-                /\s+([,.!?;:)\]}])/g,
-                "$1"
-            )
-            .replace(
-                /([(\[])\s+/g,
-                "$1"
-            )
-            .replace(
-                /\s{2,}/g,
-                " "
-            )
-            .trim();
-
-
-    return t;
-}
-
-
-/* =========================================================
    CAPTION DISPLAY
-   =========================================================
+========================================================= */
 
-   IMPORTANT:
+function displayCaption(
+    text,
+    interim = false
+) {
 
-   This function NEVER allows the caption to become
-   a giant paragraph.
-
-   It keeps only the newest portion of the speech.
-   ========================================================= */
-
-function displayCaption(text, interim = false) {
-
-    if (!text || !text.trim()) {
+    if (
+        !text ||
+        !text.trim()
+    ) {
 
         hideCaption();
 
@@ -1103,18 +1230,8 @@ function displayCaption(text, interim = false) {
     }
 
 
-    let display =
-        text.trim();
-
-
-    /*
-       Maximum two visual lines.
-
-       CSS line-clamp is used as a safety net.
-    */
-
     captionText.textContent =
-        display;
+        text.trim();
 
 
     captionText.classList.toggle(
@@ -1126,20 +1243,15 @@ function displayCaption(text, interim = false) {
     showCaption();
 
 
-    /*
-       Dynamically reduce the font if the
-       caption becomes too wide/tall.
-
-       Start at the selected size.
-    */
-
-    fitCaption();
+    requestAnimationFrame(
+        fitCaption
+    );
 }
 
 
 /* =========================================================
-   FIT CAPTION
-   ========================================================= */
+   FONT FITTING
+========================================================= */
 
 function fitCaption() {
 
@@ -1162,22 +1274,18 @@ function fitCaption() {
 
 
     /*
-       Maximum two lines.
-
-       Reduce size until the text fits.
+       Keep shrinking until the caption
+       fits inside its two-line box.
     */
 
     while (
-        (
-            captionText.scrollHeight >
+        captionText.scrollHeight >
             captionText.clientHeight
-        )
         &&
         size > 32
     ) {
 
         size -= 2;
-
 
         captionText.style.fontSize =
             size + "px";
@@ -1186,12 +1294,14 @@ function fitCaption() {
 
 
 /* =========================================================
-   FINAL CAPTION
-   ========================================================= */
+   FINAL SPEECH
+========================================================= */
 
 function showFinalSpeech(text) {
 
-    if (!text.trim()) {
+    if (
+        !text.trim()
+    ) {
 
         return;
     }
@@ -1221,7 +1331,6 @@ function showFinalSpeech(text) {
                 spelling,
                 false
             );
-
         }
 
         return;
@@ -1229,7 +1338,7 @@ function showFinalSpeech(text) {
 
 
     /*
-       Normal speech.
+       NORMAL SPEECH
     */
 
     const processed =
@@ -1252,36 +1361,27 @@ function showFinalSpeech(text) {
     /*
        IMPORTANT:
 
-       We replace the old caption.
+       REPLACE the previous caption.
 
-       We DO NOT append it.
-
-       This is what prevents the entire
-       screen from filling with transcript.
+       Do NOT accumulate a transcript.
     */
 
-    finalSentence =
-        processed;
-
-
-    interimSentence =
-        "";
-
-
     displayCaption(
-        finalSentence,
+        processed,
         false
     );
 }
 
 
 /* =========================================================
-   SPEECH RECOGNITION
-   ========================================================= */
+   CREATE SPEECH RECOGNITION
+========================================================= */
 
 function createRecognition() {
 
-    if (!SpeechRecognition) {
+    if (
+        !SpeechRecognition
+    ) {
 
         startBtn.disabled = true;
 
@@ -1309,22 +1409,20 @@ function createRecognition() {
         languageSelect.value;
 
 
-    /* =====================================================
+    /* =========================
        START
-       ===================================================== */
+    ========================= */
 
     r.onstart =
-        function () {
+        function() {
 
             listening = true;
 
             restarting = false;
 
-            startBtn.disabled =
-                true;
+            startBtn.disabled = true;
 
-            stopBtn.disabled =
-                false;
+            stopBtn.disabled = false;
 
             setStatus(
                 "Listening..."
@@ -1332,12 +1430,12 @@ function createRecognition() {
         };
 
 
-    /* =====================================================
+    /* =========================
        RESULT
-       ===================================================== */
+    ========================= */
 
     r.onresult =
-        function (event) {
+        function(event) {
 
             cancelSilenceTimer();
 
@@ -1395,10 +1493,7 @@ function createRecognition() {
 
 
             /*
-               FINAL SPEECH
-
-               Replace the caption with
-               the latest sentence.
+               FINAL
             */
 
             if (
@@ -1414,12 +1509,9 @@ function createRecognition() {
 
 
             /*
-               INTERIM SPEECH
+               INTERIM
 
-               Display only the current
-               speech fragment.
-
-               It does NOT accumulate.
+               Only show the current speech.
             */
 
             if (
@@ -1427,26 +1519,26 @@ function createRecognition() {
                 !waitingForSpellingWord
             ) {
 
-                interimSentence =
+                const processed =
                     processSpeech(
                         interimText.trim()
                     );
 
 
                 displayCaption(
-                    interimSentence,
+                    processed,
                     true
                 );
             }
         };
 
 
-    /* =====================================================
+    /* =========================
        ERROR
-       ===================================================== */
+    ========================= */
 
     r.onerror =
-        function (event) {
+        function(event) {
 
             if (
                 event.error ===
@@ -1457,14 +1549,11 @@ function createRecognition() {
 
                 listening = false;
 
-                manuallyStopped =
-                    true;
+                manuallyStopped = true;
 
-                startBtn.disabled =
-                    false;
+                startBtn.disabled = false;
 
-                stopBtn.disabled =
-                    true;
+                stopBtn.disabled = true;
 
                 setStatus(
                     "Microphone permission denied."
@@ -1525,12 +1614,12 @@ function createRecognition() {
         };
 
 
-    /* =====================================================
+    /* =========================
        END
-       ===================================================== */
+    ========================= */
 
     r.onend =
-        function () {
+        function() {
 
             restarting = false;
 
@@ -1548,11 +1637,9 @@ function createRecognition() {
 
             listening = false;
 
-            startBtn.disabled =
-                false;
+            startBtn.disabled = false;
 
-            stopBtn.disabled =
-                true;
+            stopBtn.disabled = true;
 
             setStatus(
                 "Stopped"
@@ -1566,7 +1653,7 @@ function createRecognition() {
 
 /* =========================================================
    RESTART
-   ========================================================= */
+========================================================= */
 
 function restartRecognition() {
 
@@ -1585,7 +1672,7 @@ function restartRecognition() {
 
 
     setTimeout(
-        function () {
+        function() {
 
             if (
                 !listening ||
@@ -1624,20 +1711,20 @@ function restartRecognition() {
 
 
 /* =========================================================
-   CREATE RECOGNITION
-   ========================================================= */
+   INITIALIZE
+========================================================= */
 
 recognition =
     createRecognition();
 
 
 /* =========================================================
-   START
-   ========================================================= */
+   START BUTTON
+========================================================= */
 
 startBtn.addEventListener(
     "click",
-    function () {
+    function() {
 
         if (
             !recognition
@@ -1659,11 +1746,9 @@ startBtn.addEventListener(
         }
 
 
-        manuallyStopped =
-            false;
+        manuallyStopped = false;
 
-        restarting =
-            false;
+        restarting = false;
 
 
         clearCaption();
@@ -1690,28 +1775,21 @@ startBtn.addEventListener(
 
 
 /* =========================================================
-   STOP
-   ========================================================= */
+   STOP BUTTON
+========================================================= */
 
 stopBtn.addEventListener(
     "click",
-    function () {
+    function() {
 
-        manuallyStopped =
-            true;
+        manuallyStopped = true;
 
-        listening =
-            false;
+        listening = false;
 
-        restarting =
-            false;
+        restarting = false;
 
 
         cancelSilenceTimer();
-
-
-        interimSentence =
-            "";
 
 
         if (
@@ -1728,12 +1806,9 @@ stopBtn.addEventListener(
         }
 
 
-        startBtn.disabled =
-            false;
+        startBtn.disabled = false;
 
-        stopBtn.disabled =
-            true;
-
+        stopBtn.disabled = true;
 
         setStatus(
             "Stopped"
@@ -1743,12 +1818,12 @@ stopBtn.addEventListener(
 
 
 /* =========================================================
-   CLEAR
-   ========================================================= */
+   CLEAR BUTTON
+========================================================= */
 
 clearBtn.addEventListener(
     "click",
-    function () {
+    function() {
 
         clearCaption();
 
@@ -1763,12 +1838,12 @@ clearBtn.addEventListener(
 
 
 /* =========================================================
-   FONT SIZE
-   ========================================================= */
+   SIZE
+========================================================= */
 
 sizeSelect.addEventListener(
     "change",
-    function () {
+    function() {
 
         fitCaption();
     }
@@ -1777,11 +1852,11 @@ sizeSelect.addEventListener(
 
 /* =========================================================
    LANGUAGE
-   ========================================================= */
+========================================================= */
 
 languageSelect.addEventListener(
     "change",
-    function () {
+    function() {
 
         if (
             !recognition
@@ -1799,11 +1874,9 @@ languageSelect.addEventListener(
             wasListening
         ) {
 
-            manuallyStopped =
-                true;
+            manuallyStopped = true;
 
-            listening =
-                false;
+            listening = false;
 
 
             try {
@@ -1825,13 +1898,12 @@ languageSelect.addEventListener(
         ) {
 
             setTimeout(
-                function () {
+                function() {
 
-                    manuallyStopped =
-                        false;
+                    manuallyStopped = false;
 
-                    listening =
-                        false;
+                    listening = false;
+
 
                     try {
 
@@ -1854,11 +1926,11 @@ languageSelect.addEventListener(
 
 /* =========================================================
    FULLSCREEN
-   ========================================================= */
+========================================================= */
 
 fullscreenBtn.addEventListener(
     "click",
-    async function () {
+    async function() {
 
         try {
 
@@ -1889,25 +1961,12 @@ fullscreenBtn.addEventListener(
 
 
 /* =========================================================
-   FULLSCREEN CHANGE
-   ========================================================= */
-
-document.addEventListener(
-    "fullscreenchange",
-    function () {
-
-        fitCaption();
-    }
-);
-
-
-/* =========================================================
-   WINDOW RESIZE
-   ========================================================= */
+   RESIZE
+========================================================= */
 
 window.addEventListener(
     "resize",
-    function () {
+    function() {
 
         fitCaption();
     }
@@ -1915,12 +1974,11 @@ window.addEventListener(
 
 
 /* =========================================================
-   INITIALIZE
-   ========================================================= */
+   INITIALIZE DISPLAY
+========================================================= */
 
 captionText.style.fontSize =
     sizeSelect.value + "px";
-
 
 hideCaption();
 
@@ -1929,9 +1987,7 @@ if (
     SpeechRecognition
 ) {
 
-    setStatus(
-        "Ready"
-    );
+    setStatus("Ready");
 
 }
 
