@@ -3,106 +3,53 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Classroom Live Caption</title>
 
 <style>
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  margin: 0;
-  width: 100%;
-  height: 100%;
-  background: #000;
-  color: #fff;
-  font-family: Arial, Helvetica, sans-serif;
-  overflow: hidden;
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
 }
 
 body {
-  display: flex;
-  flex-direction: column;
+    background: black;
+    color: white;
+    font-family: Arial, sans-serif;
 }
 
 #controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
-  background: #151515;
-  border-bottom: 1px solid #333;
-  flex-wrap: wrap;
+    height: 60px;
+    background: #222;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 15px;
 }
 
-button,
-select {
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 14px;
-  padding: 8px 11px;
-  border: 1px solid #555;
-  border-radius: 6px;
-  background: #252525;
-  color: #fff;
-  cursor: pointer;
-}
-
-button:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
-#status {
-  margin-left: auto;
-  color: #aaa;
-  font-size: 13px;
+button {
+    background: #444;
+    color: white;
+    border: 1px solid #777;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
 }
 
 #captionArea {
-  flex: 1;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 3vh 5vw;
-  overflow: hidden;
+    height: calc(100vh - 60px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
 }
 
 #caption {
-  width: 100%;
-  max-width: 1900px;
-  text-align: center;
-  font-size: 90px;
-  font-weight: 700;
-  line-height: 1.12;
-}
-
-#captionText {
-  width: 100%;
-  max-height: 4.48em;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-  word-break: normal;
-  transition: opacity 0.15s ease, font-size 0.1s ease;
-}
-
-#captionText.interim {
-  opacity: 0.82;
-}
-
-#captionText.hidden {
-  opacity: 0;
-}
-
-#captionText.spelling {
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-#controls.hidden {
-  display: none;
+    font-size: 90px;
+    font-weight: bold;
 }
 </style>
 </head>
@@ -110,863 +57,62 @@ button:disabled {
 <body>
 
 <div id="controls">
-  <button id="startBtn">▶ Start Listening</button>
-  <button id="stopBtn" disabled>■ Stop</button>
-  <button id="clearBtn">Clear</button>
-  <button id="fullscreenBtn">⛶ Full Screen</button>
 
-  <label>
-    Size:
-    <select id="sizeSelect">
-      <option value="60">60</option>
-      <option value="72">72</option>
-      <option value="80">80</option>
-      <option value="90" selected>90</option>
-      <option value="100">100</option>
-      <option value="110">110</option>
-      <option value="120">120</option>
-    </select>
-  </label>
+    <button id="startBtn">
+        ▶ Start Listening
+    </button>
 
-  <label>
-    Language:
-    <select id="languageMode">
-      <option value="en-US">English</option>
-      <option value="th-TH">Thai</option>
-    </select>
-  </label>
+    <button id="stopBtn">
+        ■ Stop
+    </button>
 
-  <span id="status">Ready</span>
+    <button id="clearBtn">
+        Clear
+    </button>
+
+    <button id="fullscreenBtn">
+        ⛶ Full Screen
+    </button>
+
 </div>
 
-<main id="captionArea">
-  <div id="caption">
-    <div id="captionText"></div>
-  </div>
-</main>
+<div id="captionArea">
+
+    <div id="caption">
+        CLASSROOM LIVE CAPTION
+    </div>
+
+</div>
 
 <script>
-"use strict";
-
-/* =========================================================
-   ELEMENTS
-   ========================================================= */
-
-const SpeechRecognition =
-  window.SpeechRecognition ||
-  window.webkitSpeechRecognition;
 
 const startBtn = document.getElementById("startBtn");
 const stopBtn = document.getElementById("stopBtn");
 const clearBtn = document.getElementById("clearBtn");
 const fullscreenBtn = document.getElementById("fullscreenBtn");
-const sizeSelect = document.getElementById("sizeSelect");
-const languageMode = document.getElementById("languageMode");
-const status = document.getElementById("status");
 const caption = document.getElementById("caption");
-const captionText = document.getElementById("captionText");
 
-/* =========================================================
-   STATE
-   ========================================================= */
+startBtn.addEventListener("click", function() {
+    caption.textContent = "LISTENING...";
+});
 
-let recognition = null;
-let listening = false;
+stopBtn.addEventListener("click", function() {
+    caption.textContent = "STOPPED";
+});
 
-let currentCaption = "";
-let currentInterim = "";
+clearBtn.addEventListener("click", function() {
+    caption.textContent = "";
+});
 
-let silenceTimer = null;
-
-let spellingWaiting = false;
-
-let lastFinalText = "";
-
-const SILENCE_DELAY = 500;
-const MIN_FONT_SIZE = 40;
-
-/* =========================================================
-   STATUS
-   ========================================================= */
-
-function setStatus(text) {
-  status.textContent = text;
-}
-
-/* =========================================================
-   CLEAR
-   ========================================================= */
-
-function clearCaption() {
-  currentCaption = "";
-  currentInterim = "";
-  spellingWaiting = false;
-  lastFinalText = "";
-
-  captionText.textContent = "";
-
-  captionText.classList.remove("interim");
-  captionText.classList.remove("spelling");
-  captionText.classList.add("hidden");
-}
-
-/* =========================================================
-   SILENCE
-   ========================================================= */
-
-function cancelSilenceTimer() {
-  if (silenceTimer !== null) {
-    clearTimeout(silenceTimer);
-    silenceTimer = null;
-  }
-}
-
-function restartSilenceTimer() {
-  cancelSilenceTimer();
-
-  silenceTimer = setTimeout(() => {
-    currentCaption = "";
-    currentInterim = "";
-    spellingWaiting = false;
-    lastFinalText = "";
-
-    captionText.textContent = "";
-
-    captionText.classList.remove("interim");
-    captionText.classList.remove("spelling");
-    captionText.classList.add("hidden");
-
-    silenceTimer = null;
-  }, SILENCE_DELAY);
-}
-
-/* =========================================================
-   CLEANUP
-   ========================================================= */
-
-function removeFillers(text) {
-  return text
-    .replace(/\b(um+|uh+|erm+|er+|hmm+|mm+)\b/gi, "")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-}
-
-function removeImmediateRepeats(text) {
-  const words = text.split(/\s+/);
-  const result = [];
-
-  for (const word of words) {
-    const previous = result[result.length - 1];
-
-    if (
-      previous &&
-      word.toLowerCase().replace(/[.,!?;:"'()-]/g, "") ===
-      previous.toLowerCase().replace(/[.,!?;:"'()-]/g, "")
-    ) {
-      continue;
-    }
-
-    result.push(word);
-  }
-
-  return result.join(" ");
-}
-
-/* =========================================================
-   PUNCTUATION
-   ========================================================= */
-
-function convertSpokenPunctuation(text) {
-  let t = text;
-
-  const replacements = [
-    [/\bquestion mark\b/gi, "?"],
-    [/\bquestionmark\b/gi, "?"],
-    [/\bexclamation mark\b/gi, "!"],
-    [/\bexclamation point\b/gi, "!"],
-    [/\bcomma\b/gi, ","],
-    [/\bperiod\b/gi, "."],
-    [/\bfull stop\b/gi, "."],
-    [/\bcolon\b/gi, ":"],
-    [/\bsemicolon\b/gi, ";"],
-    [/\bopen parenthesis\b/gi, "("],
-    [/\bclose parenthesis\b/gi, ")"],
-    [/\bquotation mark\b/gi, "\""],
-    [/\bquote\b/gi, "\""],
-    [/\bhyphen\b/gi, "-"],
-    [/\bdash\b/gi, "—"],
-    [/\bnew line\b/gi, "\n"],
-    [/\bnew paragraph\b/gi, "\n\n"]
-  ];
-
-  for (const [pattern, replacement] of replacements) {
-    t = t.replace(pattern, replacement);
-  }
-
-  return t;
-}
-
-/*
-   Basic question detection.
-
-   This does NOT convert words such as:
-   "are" -> R
-   "you" -> U
-
-   It only adds ? to common question structures.
-*/
-function addQuestionMark(text) {
-  const t = text.trim();
-
-  if (!t || /[.!?]$/.test(t)) {
-    return t;
-  }
-
-  const questionPattern =
-    /^(who|what|when|where|why|how|which|whose|whom)\b/i;
-
-  const auxiliaryPattern =
-    /^(am|is|are|was|were|do|does|did|can|could|will|would|should|shall|may|might|have|has|had)\b/i;
-
-  if (
-    questionPattern.test(t) ||
-    auxiliaryPattern.test(t)
-  ) {
-    return t + "?";
-  }
-
-  return t;
-}
-
-/* =========================================================
-   NUMBERS
-   ========================================================= */
-
-const units = {
-  zero: 0,
-  one: 1,
-  two: 2,
-  three: 3,
-  four: 4,
-  five: 5,
-  six: 6,
-  seven: 7,
-  eight: 8,
-  nine: 9,
-  ten: 10,
-  eleven: 11,
-  twelve: 12,
-  thirteen: 13,
-  fourteen: 14,
-  fifteen: 15,
-  sixteen: 16,
-  seventeen: 17,
-  eighteen: 18,
-  nineteen: 19
-};
-
-const tens = {
-  twenty: 20,
-  thirty: 30,
-  forty: 40,
-  fifty: 50,
-  sixty: 60,
-  seventy: 70,
-  eighty: 80,
-  ninety: 90
-};
-
-function wordsToNumber(words) {
-  let total = 0;
-  let current = 0;
-  let found = false;
-
-  for (const word of words) {
-    if (units[word] !== undefined) {
-      current += units[word];
-      found = true;
-    } else if (tens[word] !== undefined) {
-      current += tens[word];
-      found = true;
-    } else if (word === "hundred") {
-      if (current === 0) current = 1;
-      current *= 100;
-      found = true;
-    } else if (word === "thousand") {
-      if (current === 0) current = 1;
-      total += current * 1000;
-      current = 0;
-      found = true;
-    } else {
-      return null;
-    }
-  }
-
-  return found ? total + current : null;
-}
-
-function convertNumbers(text) {
-  const tokens = text.split(/\s+/);
-  const output = [];
-
-  let i = 0;
-
-  while (i < tokens.length) {
-    let bestNumber = null;
-    let bestLength = 0;
-
-    for (
-      let length = Math.min(6, tokens.length - i);
-      length >= 1;
-      length--
-    ) {
-      const candidate = tokens
-        .slice(i, i + length)
-        .map(word =>
-          word.toLowerCase().replace(/[^a-z]/g, "")
-        );
-
-      const value = wordsToNumber(candidate);
-
-      if (value !== null) {
-        bestNumber = value;
-        bestLength = length;
-        break;
-      }
-    }
-
-    if (bestLength > 0) {
-      output.push(String(bestNumber));
-      i += bestLength;
-    } else {
-      output.push(tokens[i]);
-      i++;
-    }
-  }
-
-  return output.join(" ");
-}
-
-/* =========================================================
-   SPELLING
-   ========================================================= */
-
-function spellWord(word) {
-  const clean = word
-    .replace(/[^A-Za-z]/g, "")
-    .toUpperCase();
-
-  if (!clean) {
-    return "";
-  }
-
-  return clean.split("").join("-");
-}
-
-/*
-   Matches:
-     spell apple
-     spell the word apple
-     please spell apple
-     please spell the word apple
-*/
-
-function getSpellWord(text) {
-  const cleaned = text
-    .trim()
-    .replace(/[.!?]+$/g, "")
-    .trim();
-
-  const match = cleaned.match(
-    /^(?:please\s+)?spell(?:\s+the\s+word)?\s+([A-Za-z]+)$/i
-  );
-
-  return match ? match[1] : null;
-}
-
-function isSpellOnly(text) {
-  const cleaned = text
-    .trim()
-    .replace(/[.!?]+$/g, "")
-    .trim()
-    .toLowerCase();
-
-  return (
-    cleaned === "spell" ||
-    cleaned === "please spell"
-  );
-}
-
-function processSpelling(text) {
-  const directWord = getSpellWord(text);
-
-  if (directWord) {
-    spellingWaiting = false;
-    return spellWord(directWord);
-  }
-
-  if (isSpellOnly(text)) {
-    spellingWaiting = true;
-    return "";
-  }
-
-  if (spellingWaiting) {
-    const cleaned = text.trim();
-
-    if (/^[A-Za-z]+$/.test(cleaned)) {
-      spellingWaiting = false;
-      return spellWord(cleaned);
-    }
-
-    spellingWaiting = false;
-  }
-
-  return null;
-}
-
-/* =========================================================
-   NORMAL SPEECH
-   ========================================================= */
-
-function processNormalSpeech(text) {
-  if (!text) {
-    return "";
-  }
-
-  let t = text.trim();
-
-  t = removeFillers(t);
-  t = removeImmediateRepeats(t);
-  t = convertSpokenPunctuation(t);
-  t = convertNumbers(t);
-
-  t = t
-    .replace(/\s+([,.!?;:)\]}])/g, "$1")
-    .replace(/([(\[])\s+/g, "$1")
-    .replace(/\s+([)\]])/g, "$1")
-    .replace(/[ \t]{2,}/g, " ")
-    .trim();
-
-  t = addQuestionMark(t);
-
-  return t;
-}
-
-/* =========================================================
-   RENDER
-   ========================================================= */
-
-function showCaption() {
-  captionText.classList.remove("hidden");
-}
-
-function hideCaption() {
-  captionText.classList.add("hidden");
-}
-
-function fitCaption() {
-  if (!captionText.textContent.trim()) {
-    return;
-  }
-
-  let fontSize = Number(sizeSelect.value);
-
-  caption.style.fontSize = fontSize + "px";
-
-  while (
-    captionText.scrollHeight > captionText.clientHeight &&
-    fontSize > MIN_FONT_SIZE
-  ) {
-    fontSize -= 2;
-    caption.style.fontSize = fontSize + "px";
-  }
-}
-
-function renderCaption() {
-  const display = [
-    currentCaption,
-    currentInterim
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
-
-  if (!display) {
-    captionText.textContent = "";
-    hideCaption();
-    return;
-  }
-
-  captionText.textContent = display;
-
-  captionText.classList.toggle(
-    "interim",
-    Boolean(currentInterim)
-  );
-
-  showCaption();
-  fitCaption();
-}
-
-/* =========================================================
-   FINAL SPEECH
-   ========================================================= */
-
-function appendFinalSpeech(text) {
-  if (!text.trim()) {
-    return;
-  }
-
-  const spellingResult = processSpelling(text);
-
-  if (spellingResult !== null) {
-    currentCaption = spellingResult;
-    currentInterim = "";
-
-    captionText.classList.toggle(
-      "spelling",
-      Boolean(spellingResult)
-    );
-
-    renderCaption();
-    return;
-  }
-
-  if (spellingWaiting) {
-    return;
-  }
-
-  const processed = processNormalSpeech(text);
-
-  if (!processed.trim()) {
-    return;
-  }
-
-  if (
-    processed.toLowerCase() ===
-    lastFinalText.toLowerCase()
-  ) {
-    return;
-  }
-
-  if (/^[,.!?;:)\]}]/.test(processed)) {
-    currentCaption =
-      currentCaption.trim() + processed;
-  } else {
-    currentCaption =
-      (
-        currentCaption +
-        " " +
-        processed
-      )
-        .replace(/\s+/g, " ")
-        .trim();
-  }
-
-  lastFinalText = processed;
-
-  captionText.classList.remove("spelling");
-
-  renderCaption();
-}
-
-/* =========================================================
-   SPEECH RECOGNITION
-   ========================================================= */
-
-if (!SpeechRecognition) {
-
-  startBtn.disabled = true;
-
-  setStatus(
-    "Chrome speech recognition is unavailable."
-  );
-
-} else {
-
-  recognition = new SpeechRecognition();
-
-  recognition.continuous = true;
-  recognition.interimResults = true;
-  recognition.maxAlternatives = 5;
-  recognition.lang = languageMode.value;
-
-  recognition.onstart = () => {
-    listening = true;
-
-    startBtn.disabled = true;
-    stopBtn.disabled = false;
-
-    setStatus("Listening…");
-  };
-
-  recognition.onresult = (event) => {
-
-    cancelSilenceTimer();
-
-    currentInterim = "";
-
-    let finalText = "";
-    let interimText = "";
-
-    for (
-      let i = event.resultIndex;
-      i < event.results.length;
-      i++
-    ) {
-
-      const result = event.results[i];
-
-      const transcript =
-        result[0].transcript.trim();
-
-      if (!transcript) {
-        continue;
-      }
-
-      if (result.isFinal) {
-        finalText += " " + transcript;
-      } else {
-        interimText += " " + transcript;
-      }
-    }
-
-    if (finalText.trim()) {
-
-      appendFinalSpeech(
-        finalText.trim()
-      );
-
-      restartSilenceTimer();
-    }
-
-    if (
-      interimText.trim() &&
-      !spellingWaiting
-    ) {
-
-      currentInterim =
-        processNormalSpeech(
-          interimText.trim()
-        );
-
-    } else {
-
-      currentInterim = "";
-
-    }
-
-    renderCaption();
-  };
-
-  recognition.onerror = (event) => {
-
-    if (
-      event.error === "not-allowed" ||
-      event.error === "service-not-allowed"
-    ) {
-
-      listening = false;
-
-      startBtn.disabled = false;
-      stopBtn.disabled = true;
-
-      setStatus(
-        "Microphone permission denied."
-      );
-
-      return;
-    }
-
-    setStatus("Listening…");
-  };
-
-  recognition.onend = () => {
-
-    if (listening) {
-
-      setTimeout(() => {
-
-        if (!listening) {
-          return;
-        }
-
-        try {
-          recognition.lang =
-            languageMode.value;
-
-          recognition.start();
-        } catch (error) {}
-
-      }, 200);
-
-    } else {
-
-      startBtn.disabled = false;
-      stopBtn.disabled = true;
-
-      setStatus("Stopped");
-    }
-  };
-
-  startBtn.addEventListener(
-    "click",
-    () => {
-
-      if (listening) {
-        return;
-      }
-
-      clearCaption();
-      cancelSilenceTimer();
-
-      recognition.lang =
-        languageMode.value;
-
-      try {
-        recognition.start();
-      } catch (error) {
-        setStatus(
-          "Could not start listening."
-        );
-      }
-    }
-  );
-
-  stopBtn.addEventListener(
-    "click",
-    () => {
-
-      listening = false;
-
-      cancelSilenceTimer();
-
-      currentInterim = "";
-      spellingWaiting = false;
-
-      try {
-        recognition.stop();
-      } catch (error) {}
-
-      setStatus("Stopped");
-    }
-  );
-
-}
-
-/* =========================================================
-   CLEAR
-   ========================================================= */
-
-clearBtn.addEventListener(
-  "click",
-  () => {
-
-    cancelSilenceTimer();
-    clearCaption();
-
-    setStatus(
-      listening
-        ? "Listening…"
-        : "Ready"
-    );
-  }
-);
-
-/* =========================================================
-   FONT SIZE
-   ========================================================= */
-
-sizeSelect.addEventListener(
-  "change",
-  () => {
-
-    caption.style.fontSize =
-      sizeSelect.value + "px";
-
-    fitCaption();
-  }
-);
-
-/* =========================================================
-   LANGUAGE
-   ========================================================= */
-
-languageMode.addEventListener(
-  "change",
-  () => {
-
-    if (!recognition) {
-      return;
-    }
-
-    recognition.lang =
-      languageMode.value;
-
-    if (listening) {
-      try {
-        recognition.stop();
-      } catch (error) {}
-    }
-  }
-);
-
-/* =========================================================
-   FULL SCREEN
-   ========================================================= */
-
-fullscreenBtn.addEventListener(
-  "click",
-  async () => {
-
-    try {
-
-      if (!document.fullscreenElement) {
-
-        await document.documentElement
-          .requestFullscreen();
-
-        document
-          .getElementById("controls")
-          .classList
-          .add("hidden");
-
-      } else {
-
-        await document.exitFullscreen();
-      }
-
-    } catch (error) {
-
-      setStatus(
-        "Full screen unavailable."
-      );
-    }
-  }
-);
-
-document.addEventListener(
-  "fullscreenchange",
-  () => {
+fullscreenBtn.addEventListener("click", function() {
 
     if (!document.fullscreenElement) {
-
-      document
-        .getElementById("controls")
-        .classList
-        .remove("hidden");
+        document.documentElement.requestFullscreen();
+    } else {
+        document.exitFullscreen();
     }
-  }
-);
 
-/* =========================================================
-   INITIALIZE
-   ========================================================= */
-
-caption.style.fontSize =
-  sizeSelect.value;
-
-hideCaption();
+});
 
 </script>
 
