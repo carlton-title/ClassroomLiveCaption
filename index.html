@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Classroom Live Caption</title>
 
 <style>
+
 * {
     box-sizing: border-box;
 }
@@ -24,73 +26,103 @@ body {
     overflow: hidden;
 }
 
-/* =========================
+
+/* =========================================================
    CONTROLS
-========================= */
+========================================================= */
 
 #controls {
+
     position: fixed;
+
     top: 0;
     left: 0;
+
     width: 100%;
+
     z-index: 100;
 
     display: flex;
     align-items: center;
+
     gap: 8px;
 
     padding: 10px 12px;
 
-    background: #181818;
+    background: #171717;
+
     border-bottom: 1px solid #444;
 
     flex-wrap: wrap;
 }
 
+
 button,
 select {
+
     font-family: Arial, Helvetica, sans-serif;
+
     font-size: 15px;
 
     padding: 9px 12px;
 
     border: 1px solid #666;
+
     border-radius: 6px;
 
     background: #292929;
+
     color: #fff;
 
     cursor: pointer;
 }
 
+
 button:hover,
 select:hover {
+
     background: #383838;
 }
 
+
 button:disabled {
+
     opacity: 0.45;
+
     cursor: default;
 }
 
+
 label {
+
     display: flex;
+
     align-items: center;
+
     gap: 5px;
+
     font-size: 14px;
 }
+
 
 #status {
+
     margin-left: auto;
+
     color: #aaa;
+
     font-size: 14px;
 }
 
-/* =========================
+
+/* =========================================================
    CAPTION AREA
-========================= */
+
+   CENTER OF SCREEN
+========================================================= */
 
 #captionArea {
+
     position: fixed;
 
     top: 0;
@@ -101,115 +133,195 @@ label {
 
     display: flex;
 
-    align-items: flex-end;
+    align-items: center;
+
     justify-content: center;
 
-    padding: 0 6vw 8vh 6vw;
+    padding: 12vh 7vw;
 
     pointer-events: none;
+
+    z-index: 10;
 }
 
+
 #caption {
+
     width: 100%;
-    max-width: 1600px;
+
+    max-width: 1700px;
 
     display: flex;
+
     justify-content: center;
+
     align-items: center;
 
     text-align: center;
 }
 
-/* =========================
-   CAPTION TEXT
+
+/* =========================================================
+   CAPTION BOX
 
    MAXIMUM TWO LINES
-========================= */
+========================================================= */
 
 #captionText {
-    display: -webkit-box;
 
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    width: auto;
 
-    overflow: hidden;
-
-    width: 100%;
     max-width: 1600px;
 
-    max-height: 2.35em;
+    padding: 14px 28px;
+
+    border-radius: 12px;
+
+    background: rgba(0, 0, 0, 0.72);
+
+    color: #fff;
+
+    text-align: center;
 
     font-size: 90px;
+
     font-weight: 700;
 
     line-height: 1.12;
 
-    text-align: center;
+    /*
+       Maximum two lines.
+    */
 
-    white-space: normal;
+    display: -webkit-box;
+
+    -webkit-box-orient: vertical;
+
+    -webkit-line-clamp: 2;
+
+    overflow: hidden;
+
+    /*
+       Prevent the box from becoming
+       unnecessarily tall.
+    */
+
+    max-height: 2.24em;
+
+    /*
+       Keep normal words intact.
+    */
+
     overflow-wrap: normal;
+
     word-break: normal;
 
+    /*
+       Readability.
+    */
+
     text-shadow:
+
         2px 2px 4px #000,
+
         -2px -2px 4px #000,
+
         2px -2px 4px #000,
+
         -2px 2px 4px #000;
 }
 
+
+/* =========================================================
+   INTERIM SPEECH
+========================================================= */
+
 #captionText.interim {
+
     opacity: 0.72;
 }
 
+
+/* =========================================================
+   SPELLING MODE
+========================================================= */
+
 #captionText.spelling {
+
     font-weight: 900;
+
     letter-spacing: 0.08em;
+
     text-transform: uppercase;
 }
 
+
+/* =========================================================
+   HIDDEN
+========================================================= */
+
 .hidden {
+
     visibility: hidden;
 }
 
-/* =========================
+
+/* =========================================================
    MOBILE
-========================= */
+========================================================= */
 
 @media (max-width: 700px) {
 
     #controls {
+
         padding: 8px;
     }
 
+
     button,
     select {
+
         font-size: 14px;
+
         padding: 8px 10px;
     }
 
+
     #status {
+
         width: 100%;
+
         margin-left: 0;
     }
 
+
     #captionArea {
-        padding-left: 4vw;
-        padding-right: 4vw;
-        padding-bottom: 7vh;
+
+        padding: 10vh 4vw;
     }
 
+
     #captionText {
+
         font-size: 55px;
+
+        padding: 10px 18px;
+
+        border-radius: 8px;
     }
 }
+
 </style>
+
 </head>
+
 
 <body>
 
-<!-- =========================
+
+<!-- =======================================================
      CONTROLS
-========================= -->
+======================================================= -->
 
 <div id="controls">
 
@@ -217,41 +329,69 @@ label {
         ▶ Start Listening
     </button>
 
+
     <button id="stopBtn" disabled>
         ■ Stop
     </button>
+
 
     <button id="clearBtn">
         Clear
     </button>
 
+
     <button id="fullscreenBtn">
         ⛶ Full Screen
     </button>
 
+
     <label>
+
         Size:
 
         <select id="sizeSelect">
+
             <option value="50">50</option>
+
             <option value="60">60</option>
+
             <option value="70">70</option>
+
             <option value="80">80</option>
-            <option value="90" selected>90</option>
+
+            <option value="90" selected>
+                90
+            </option>
+
             <option value="100">100</option>
+
             <option value="110">110</option>
+
             <option value="120">120</option>
+
         </select>
+
     </label>
 
+
     <label>
+
         Language:
 
         <select id="languageSelect">
-            <option value="en-US">English</option>
-            <option value="th-TH">Thai</option>
+
+            <option value="en-US">
+                English
+            </option>
+
+            <option value="th-TH">
+                Thai
+            </option>
+
         </select>
+
     </label>
+
 
     <span id="status">
         Ready
@@ -260,19 +400,24 @@ label {
 </div>
 
 
-<!-- =========================
+
+<!-- =======================================================
      CAPTION
-========================= -->
+======================================================= -->
 
 <main id="captionArea">
 
     <div id="caption">
 
-        <div id="captionText" class="hidden"></div>
+        <div
+            id="captionText"
+            class="hidden">
+        </div>
 
     </div>
 
 </main>
+
 
 
 <script>
@@ -285,7 +430,9 @@ label {
 ========================================================= */
 
 const SpeechRecognition =
+
     window.SpeechRecognition ||
+
     window.webkitSpeechRecognition;
 
 
@@ -336,15 +483,19 @@ let spellingMode = false;
 
 let waitingForSpellingWord = false;
 
+
 const SILENCE_DELAY = 1800;
+
+const MIN_FONT_SIZE = 32;
 
 
 /* =========================================================
    STATUS
 ========================================================= */
 
-function setStatus(text) {
-    status.textContent = text;
+function setStatus(message) {
+
+    status.textContent = message;
 }
 
 
@@ -353,16 +504,23 @@ function setStatus(text) {
 ========================================================= */
 
 function showCaption() {
-    captionText.classList.remove("hidden");
+
+    captionText.classList.remove(
+        "hidden"
+    );
 }
 
+
 function hideCaption() {
-    captionText.classList.add("hidden");
+
+    captionText.classList.add(
+        "hidden"
+    );
 }
 
 
 /* =========================================================
-   CLEAR
+   CLEAR CAPTION
 ========================================================= */
 
 function clearCaption() {
@@ -375,9 +533,13 @@ function clearCaption() {
 
     captionText.textContent = "";
 
-    captionText.classList.remove("interim");
+    captionText.classList.remove(
+        "interim"
+    );
 
-    captionText.classList.remove("spelling");
+    captionText.classList.remove(
+        "spelling"
+    );
 
     hideCaption();
 }
@@ -389,9 +551,13 @@ function clearCaption() {
 
 function cancelSilenceTimer() {
 
-    if (silenceTimer !== null) {
+    if (
+        silenceTimer !== null
+    ) {
 
-        clearTimeout(silenceTimer);
+        clearTimeout(
+            silenceTimer
+        );
 
         silenceTimer = null;
     }
@@ -402,19 +568,28 @@ function startSilenceTimer() {
 
     cancelSilenceTimer();
 
-    silenceTimer = setTimeout(function() {
 
-        captionText.textContent = "";
+    silenceTimer = setTimeout(
+        function() {
 
-        captionText.classList.remove("interim");
+            captionText.textContent = "";
 
-        captionText.classList.remove("spelling");
+            captionText.classList.remove(
+                "interim"
+            );
 
-        hideCaption();
+            captionText.classList.remove(
+                "spelling"
+            );
 
-        silenceTimer = null;
+            hideCaption();
 
-    }, SILENCE_DELAY);
+            silenceTimer = null;
+
+        },
+
+        SILENCE_DELAY
+    );
 }
 
 
@@ -425,48 +600,83 @@ function startSilenceTimer() {
 function removeFillers(text) {
 
     return text
+
         .replace(
             /\b(um+|uh+|erm+|er+|hmm+|mm+)\b/gi,
             ""
         )
-        .replace(/\s{2,}/g, " ")
+
+        .replace(
+            /\s{2,}/g,
+            " "
+        )
+
         .trim();
 }
 
 
 /* =========================================================
-   REPEATED WORDS
+   IMMEDIATE REPEATED WORDS
 ========================================================= */
 
 function removeImmediateRepeats(text) {
 
-    const words = text.split(/\s+/);
+    const words =
+        text.split(/\s+/);
 
     const result = [];
 
-    for (const word of words) {
+
+    for (
+        const word of words
+    ) {
 
         const current =
+
             word
+
                 .toLowerCase()
-                .replace(/[.,!?;:"'()[\]{}-]/g, "");
+
+                .replace(
+                    /[.,!?;:"'()[\]{}-]/g,
+                    ""
+                );
+
 
         const previous =
+
             result.length
-                ? result[result.length - 1]
+
+                ?
+
+                result[
+                    result.length - 1
+                ]
+
                     .toLowerCase()
-                    .replace(/[.,!?;:"'()[\]{}-]/g, "")
-                : "";
+
+                    .replace(
+                        /[.,!?;:"'()[\]{}-]/g,
+                        ""
+                    )
+
+                :
+
+                "";
+
 
         if (
             current &&
             current === previous
         ) {
+
             continue;
         }
 
+
         result.push(word);
     }
+
 
     return result.join(" ");
 }
@@ -474,37 +684,76 @@ function removeImmediateRepeats(text) {
 
 /* =========================================================
    SPOKEN PUNCTUATION
-
-   NOTE:
-   We are NOT requiring the speaker to say
-   "question mark" for normal questions.
-
-   The program can infer basic questions.
 ========================================================= */
 
 function convertSpokenPunctuation(text) {
 
     let t = text;
 
+
     const replacements = [
 
-        [/\bnew paragraph\b/gi, "\n\n"],
-        [/\bnew line\b/gi, "\n"],
+        [
+            /\bnew paragraph\b/gi,
+            "\n\n"
+        ],
 
-        [/\bquestion mark\b/gi, "?"],
-        [/\bexclamation mark\b/gi, "!"],
-        [/\bexclamation point\b/gi, "!"],
+        [
+            /\bnew line\b/gi,
+            "\n"
+        ],
 
-        [/\bcomma\b/gi, ","],
-        [/\bfull stop\b/gi, "."],
-        [/\bperiod\b/gi, "."],
+        [
+            /\bquestion mark\b/gi,
+            "?"
+        ],
 
-        [/\bcolon\b/gi, ":"],
-        [/\bsemicolon\b/gi, ";"],
+        [
+            /\bexclamation mark\b/gi,
+            "!"
+        ],
 
-        [/\bopen parenthesis\b/gi, "("],
-        [/\bclose parenthesis\b/gi, ")"]
+        [
+            /\bexclamation point\b/gi,
+            "!"
+        ],
+
+        [
+            /\bcomma\b/gi,
+            ","
+        ],
+
+        [
+            /\bfull stop\b/gi,
+            "."
+        ],
+
+        [
+            /\bperiod\b/gi,
+            "."
+        ],
+
+        [
+            /\bcolon\b/gi,
+            ":"
+        ],
+
+        [
+            /\bsemicolon\b/gi,
+            ";"
+        ],
+
+        [
+            /\bopen parenthesis\b/gi,
+            "("
+        ],
+
+        [
+            /\bclose parenthesis\b/gi,
+            ")"
+        ]
     ];
+
 
     for (
         const [pattern, replacement]
@@ -518,52 +767,81 @@ function convertSpokenPunctuation(text) {
             );
     }
 
+
     return t;
 }
 
 
 /* =========================================================
-   NUMBER WORDS
+   NUMBER WORD TABLES
 ========================================================= */
 
 const units = {
+
     zero: 0,
+
     one: 1,
+
     two: 2,
+
     three: 3,
+
     four: 4,
+
     five: 5,
+
     six: 6,
+
     seven: 7,
+
     eight: 8,
+
     nine: 9,
+
     ten: 10,
+
     eleven: 11,
+
     twelve: 12,
+
     thirteen: 13,
+
     fourteen: 14,
+
     fifteen: 15,
+
     sixteen: 16,
+
     seventeen: 17,
+
     eighteen: 18,
+
     nineteen: 19
 };
 
 
 const tens = {
+
     twenty: 20,
+
     thirty: 30,
+
     forty: 40,
+
     fifty: 50,
+
     sixty: 60,
+
     seventy: 70,
+
     eighty: 80,
+
     ninety: 90
 };
 
 
 /* =========================================================
-   NUMBER WORD → VALUE
+   NUMBER WORDS → VALUE
 ========================================================= */
 
 function numberWordsToValue(words) {
@@ -574,56 +852,66 @@ function numberWordsToValue(words) {
 
     let found = false;
 
-    for (const word of words) {
+
+    for (
+        const word of words
+    ) {
 
         if (
             units[word] !== undefined
         ) {
 
-            current += units[word];
+            current +=
+                units[word];
 
             found = true;
-
         }
 
         else if (
             tens[word] !== undefined
         ) {
 
-            current += tens[word];
+            current +=
+                tens[word];
 
             found = true;
-
         }
 
         else if (
             word === "hundred"
         ) {
 
-            if (current === 0) {
+            if (
+                current === 0
+            ) {
+
                 current = 1;
             }
+
 
             current *= 100;
 
             found = true;
-
         }
 
         else if (
             word === "thousand"
         ) {
 
-            if (current === 0) {
+            if (
+                current === 0
+            ) {
+
                 current = 1;
             }
 
-            total += current * 1000;
+
+            total +=
+                current * 1000;
 
             current = 0;
 
             found = true;
-
         }
 
         else {
@@ -632,26 +920,21 @@ function numberWordsToValue(words) {
         }
     }
 
+
     return found
-        ? total + current
-        : null;
+
+        ?
+
+        total + current
+
+        :
+
+        null;
 }
 
 
 /* =========================================================
-   YEAR DETECTION
-=========================================================
-
-   This is the important new system.
-
-   It recognizes:
-
-   nineteen ninety-five → 1995
-   twenty twenty-six   → 2026
-   twenty twenty-seven → 2027
-   twenty twenty-nine  → 2029
-   two thousand twenty-six → 2026
-
+   YEAR CONVERSION
 ========================================================= */
 
 function convertYearPhrase(text) {
@@ -668,9 +951,12 @@ function convertYearPhrase(text) {
         i < words.length
     ) {
 
-        const cleaned =
+        const current =
+
             words[i]
+
                 .toLowerCase()
+
                 .replace(
                     /[^a-z]/g,
                     ""
@@ -678,25 +964,35 @@ function convertYearPhrase(text) {
 
 
         /*
-           TWO THOUSAND + YEAR
+           2000 + number
+
+           two thousand twenty-six
+           → 2026
         */
 
         if (
-            cleaned === "two" &&
+            current === "two" &&
             i + 2 < words.length
         ) {
 
-            const next =
+            const second =
+
                 words[i + 1]
+
                     .toLowerCase()
+
                     .replace(
                         /[^a-z]/g,
                         ""
                     );
 
-            const next2 =
+
+            const third =
+
                 words[i + 2]
+
                     .toLowerCase()
+
                     .replace(
                         /[^a-z]/g,
                         ""
@@ -704,28 +1000,24 @@ function convertYearPhrase(text) {
 
 
             if (
-                next === "thousand" &&
-                (
-                    units[next2] !== undefined ||
-                    tens[next2] !== undefined
-                )
+                second === "thousand"
             ) {
 
-                const last =
+                const value =
                     numberWordsToValue([
-                        next2
+                        third
                     ]);
 
 
                 if (
-                    last !== null &&
-                    last >= 0 &&
-                    last <= 99
+                    value !== null &&
+                    value >= 0 &&
+                    value <= 99
                 ) {
 
                     result.push(
                         String(
-                            2000 + last
+                            2000 + value
                         )
                     );
 
@@ -738,106 +1030,104 @@ function convertYearPhrase(text) {
 
 
         /*
-           TWENTY TWENTY-SIX
-           TWENTY TWENTY-SEVEN
-           etc.
+           twenty twenty-six
+
+           → 2026
         */
 
         if (
-            cleaned === "twenty" &&
+            current === "twenty" &&
             i + 1 < words.length
         ) {
 
             const second =
+
                 words[i + 1]
+
                     .toLowerCase()
+
                     .replace(
                         /[^a-z]/g,
                         ""
                     );
 
 
+            const value =
+                numberWordsToValue([
+                    second
+                ]);
+
+
             if (
-                units[second] !== undefined ||
-                tens[second] !== undefined
+                value !== null &&
+                value >= 0 &&
+                value <= 99
             ) {
 
-                const secondValue =
-                    numberWordsToValue([
-                        second
-                    ]);
+                result.push(
+                    String(
+                        2000 + value
+                    )
+                );
 
+                i += 2;
 
-                if (
-                    secondValue !== null &&
-                    secondValue >= 0 &&
-                    secondValue <= 99
-                ) {
-
-                    result.push(
-                        String(
-                            2000 + secondValue
-                        )
-                    );
-
-                    i += 2;
-
-                    continue;
-                }
+                continue;
             }
         }
 
 
         /*
-           NINETEEN NINETY-FIVE
-           NINETEEN NINETY-NINE
+           nineteen ninety-five
+
+           → 1995
         */
 
         if (
-            cleaned === "nineteen" &&
+            current === "nineteen" &&
             i + 1 < words.length
         ) {
 
             const second =
+
                 words[i + 1]
+
                     .toLowerCase()
+
                     .replace(
                         /[^a-z]/g,
                         ""
                     );
 
 
+            const value =
+                numberWordsToValue([
+                    second
+                ]);
+
+
             if (
-                tens[second] !== undefined ||
-                units[second] !== undefined
+                value !== null &&
+                value >= 0 &&
+                value <= 99
             ) {
 
-                const secondValue =
-                    numberWordsToValue([
-                        second
-                    ]);
+                result.push(
+                    String(
+                        1900 + value
+                    )
+                );
 
+                i += 2;
 
-                if (
-                    secondValue !== null &&
-                    secondValue <= 99
-                ) {
-
-                    result.push(
-                        String(
-                            1900 + secondValue
-                        )
-                    );
-
-                    i += 2;
-
-                    continue;
-                }
+                continue;
             }
         }
 
 
-        result.push(words[i]);
+        result.push(
+            words[i]
+        );
 
         i++;
     }
@@ -850,19 +1140,13 @@ function convertYearPhrase(text) {
 /* =========================================================
    ORDINARY NUMBER CONVERSION
 
-   IMPORTANT:
+   ONE IS PROTECTED.
 
-   "one" is NOT automatically converted to "1".
+   Therefore:
 
-   This is intentional.
-
-   We want:
-
-   "I am not the only one."
-
-   NOT:
-
-   "I am not the only 1."
+   "only one"
+       remains
+   "only one"
 
 ========================================================= */
 
@@ -873,16 +1157,17 @@ function convertOrdinaryNumbers(text) {
 
     const result = [];
 
-    let i = 0;
 
-
-    while (
-        i < words.length
+    for (
+        const word of words
     ) {
 
         const clean =
-            words[i]
+
+            word
+
                 .toLowerCase()
+
                 .replace(
                     /[^a-z]/g,
                     ""
@@ -890,25 +1175,21 @@ function convertOrdinaryNumbers(text) {
 
 
         /*
-           NEVER convert "one" when it is
-           being used as an ordinary word.
+           Protect "one".
         */
 
         if (
             clean === "one"
         ) {
 
-            result.push(words[i]);
-
-            i++;
+            result.push(word);
 
             continue;
         }
 
 
         /*
-           Convert numbers beginning at
-           TWO rather than ONE.
+           Convert 2–19.
         */
 
         if (
@@ -922,11 +1203,13 @@ function convertOrdinaryNumbers(text) {
                 )
             );
 
-            i++;
-
             continue;
         }
 
+
+        /*
+           Convert 20, 30, etc.
+        */
 
         if (
             tens[clean] !== undefined
@@ -938,15 +1221,11 @@ function convertOrdinaryNumbers(text) {
                 )
             );
 
-            i++;
-
             continue;
         }
 
 
-        result.push(words[i]);
-
-        i++;
+        result.push(word);
     }
 
 
@@ -960,41 +1239,22 @@ function convertOrdinaryNumbers(text) {
 
 function convertNumbersContextually(text) {
 
-    /*
-       FIRST:
-       Look for recognizable years.
-    */
-
-    let processed =
+    let result =
         convertYearPhrase(text);
 
 
-    /*
-       SECOND:
-       Convert ordinary numbers.
-
-       "one" is deliberately protected.
-    */
-
-    processed =
+    result =
         convertOrdinaryNumbers(
-            processed
+            result
         );
 
 
-    return processed;
+    return result;
 }
 
 
 /* =========================================================
    QUESTION DETECTION
-=========================================================
-
-   We only add a question mark when the sentence
-   strongly looks like a question.
-
-   We do NOT automatically put ? after every
-   sentence beginning with "what", "how", etc.
 ========================================================= */
 
 function addQuestionMark(text) {
@@ -1004,9 +1264,14 @@ function addQuestionMark(text) {
 
 
     if (!t) {
+
         return "";
     }
 
+
+    /*
+       Already has punctuation.
+    */
 
     if (
         /[.!?]$/.test(t)
@@ -1017,20 +1282,35 @@ function addQuestionMark(text) {
 
 
     /*
-       Strong question structures.
+       Direct auxiliary questions:
+
+       Is he...
+       Are they...
+       Did you...
+       Can you...
+       Will you...
     */
 
-    const strongQuestion =
-        /^(who|what|when|where|why|how)\b.+\b(is|are|was|were|do|does|did|can|could|will|would|should|have|has|had)\b/i;
-
-
     const auxiliaryQuestion =
+
         /^(am|is|are|was|were|do|does|did|can|could|will|would|should|shall|may|might|have|has|had)\b/i;
 
 
+    /*
+       WH-question structures.
+
+       Only add ? when the sentence contains
+       a recognizable question structure.
+    */
+
+    const whQuestion =
+
+        /^(who|what|when|where|why|how|which|whose|whom)\b.*\b(is|are|was|were|do|does|did|can|could|will|would|should|have|has|had)\b/i;
+
+
     if (
-        strongQuestion.test(t) ||
-        auxiliaryQuestion.test(t)
+        auxiliaryQuestion.test(t) ||
+        whQuestion.test(t)
     ) {
 
         return t + "?";
@@ -1042,7 +1322,7 @@ function addQuestionMark(text) {
 
 
 /* =========================================================
-   NORMAL SPEECH PROCESSING
+   NORMAL SPEECH
 ========================================================= */
 
 function processSpeech(text) {
@@ -1064,7 +1344,7 @@ function processSpeech(text) {
 
 
     /*
-       NEW CONTEXT-AWARE NUMBER SYSTEM
+       Context-aware numbers.
     */
 
     t =
@@ -1073,18 +1353,22 @@ function processSpeech(text) {
 
     t =
         t
+
             .replace(
                 /\s+([,.!?;:)\]}])/g,
                 "$1"
             )
+
             .replace(
                 /([(\[])\s+/g,
                 "$1"
             )
+
             .replace(
                 /\s{2,}/g,
                 " "
             )
+
             .trim();
 
 
@@ -1103,15 +1387,19 @@ function processSpeech(text) {
 function spellWord(word) {
 
     const clean =
+
         word
+
             .replace(
                 /[^A-Za-z]/g,
                 ""
             )
+
             .toUpperCase();
 
 
     if (!clean) {
+
         return "";
     }
 
@@ -1125,12 +1413,16 @@ function spellWord(word) {
 function processSpelling(text) {
 
     const cleaned =
+
         text
+
             .trim()
+
             .replace(
                 /[.!?]+$/g,
                 ""
             )
+
             .trim();
 
 
@@ -1139,8 +1431,11 @@ function processSpelling(text) {
     */
 
     const direct =
+
         cleaned.match(
+
             /^(?:please\s+)?spell(?:\s+the\s+word)?\s+([A-Za-z]+)$/i
+
         );
 
 
@@ -1211,7 +1506,7 @@ function processSpelling(text) {
 
 
 /* =========================================================
-   CAPTION DISPLAY
+   DISPLAY CAPTION
 ========================================================= */
 
 function displayCaption(
@@ -1251,6 +1546,11 @@ function displayCaption(
 
 /* =========================================================
    FONT FITTING
+
+   The caption starts at the selected size.
+
+   If it is too large for two lines,
+   it gradually becomes smaller.
 ========================================================= */
 
 function fitCaption() {
@@ -1263,32 +1563,32 @@ function fitCaption() {
     }
 
 
-    let size =
+    let fontSize =
         Number(
             sizeSelect.value
         );
 
 
     captionText.style.fontSize =
-        size + "px";
+        fontSize + "px";
 
-
-    /*
-       Keep shrinking until the caption
-       fits inside its two-line box.
-    */
 
     while (
+
         captionText.scrollHeight >
             captionText.clientHeight
+
         &&
-        size > 32
+
+        fontSize > MIN_FONT_SIZE
+
     ) {
 
-        size -= 2;
+        fontSize -= 2;
+
 
         captionText.style.fontSize =
-            size + "px";
+            fontSize + "px";
     }
 }
 
@@ -1308,7 +1608,7 @@ function showFinalSpeech(text) {
 
 
     /*
-       Check spelling first.
+       SPELLING COMMAND
     */
 
     const spelling =
@@ -1327,11 +1627,13 @@ function showFinalSpeech(text) {
                 "spelling"
             );
 
+
             displayCaption(
                 spelling,
                 false
             );
         }
+
 
         return;
     }
@@ -1361,9 +1663,8 @@ function showFinalSpeech(text) {
     /*
        IMPORTANT:
 
-       REPLACE the previous caption.
-
-       Do NOT accumulate a transcript.
+       We show the current caption rather
+       than accumulating the entire speech.
     */
 
     displayCaption(
@@ -1374,7 +1675,7 @@ function showFinalSpeech(text) {
 
 
 /* =========================================================
-   CREATE SPEECH RECOGNITION
+   CREATE RECOGNITION
 ========================================================= */
 
 function createRecognition() {
@@ -1409,9 +1710,9 @@ function createRecognition() {
         languageSelect.value;
 
 
-    /* =========================
+    /* =====================================================
        START
-    ========================= */
+    ===================================================== */
 
     r.onstart =
         function() {
@@ -1430,9 +1731,9 @@ function createRecognition() {
         };
 
 
-    /* =========================
+    /* =====================================================
        RESULT
-    ========================= */
+    ===================================================== */
 
     r.onresult =
         function(event) {
@@ -1446,6 +1747,7 @@ function createRecognition() {
 
 
             for (
+
                 let i =
                     event.resultIndex;
 
@@ -1453,6 +1755,7 @@ function createRecognition() {
                     event.results.length;
 
                 i++
+
             ) {
 
                 const result =
@@ -1460,6 +1763,7 @@ function createRecognition() {
 
 
                 const transcript =
+
                     result[0]
                         .transcript
                         .trim();
@@ -1493,7 +1797,7 @@ function createRecognition() {
 
 
             /*
-               FINAL
+               FINAL CAPTION
             */
 
             if (
@@ -1504,19 +1808,23 @@ function createRecognition() {
                     finalText.trim()
                 );
 
+
                 startSilenceTimer();
             }
 
 
             /*
-               INTERIM
-
-               Only show the current speech.
+               LIVE INTERIM CAPTION
             */
 
             if (
-                interimText.trim() &&
+
+                interimText.trim()
+
+                &&
+
                 !waitingForSpellingWord
+
             ) {
 
                 const processed =
@@ -1533,18 +1841,23 @@ function createRecognition() {
         };
 
 
-    /* =========================
+    /* =====================================================
        ERROR
-    ========================= */
+    ===================================================== */
 
     r.onerror =
         function(event) {
 
             if (
+
                 event.error ===
-                    "not-allowed" ||
+                    "not-allowed"
+
+                ||
+
                 event.error ===
                     "service-not-allowed"
+
             ) {
 
                 listening = false;
@@ -1614,9 +1927,9 @@ function createRecognition() {
         };
 
 
-    /* =========================
+    /* =====================================================
        END
-    ========================= */
+    ===================================================== */
 
     r.onend =
         function() {
@@ -1625,8 +1938,13 @@ function createRecognition() {
 
 
             if (
-                listening &&
+
+                listening
+
+                &&
+
                 !manuallyStopped
+
             ) {
 
                 restartRecognition();
@@ -1658,10 +1976,21 @@ function createRecognition() {
 function restartRecognition() {
 
     if (
-        !recognition ||
-        !listening ||
-        manuallyStopped ||
+
+        !recognition
+
+        ||
+
+        !listening
+
+        ||
+
+        manuallyStopped
+
+        ||
+
         restarting
+
     ) {
 
         return;
@@ -1675,8 +2004,13 @@ function restartRecognition() {
         function() {
 
             if (
-                !listening ||
+
+                !listening
+
+                ||
+
                 manuallyStopped
+
             ) {
 
                 restarting = false;
@@ -1690,6 +2024,7 @@ function restartRecognition() {
                 recognition.lang =
                     languageSelect.value;
 
+
                 recognition.start();
 
             }
@@ -1698,6 +2033,7 @@ function restartRecognition() {
 
                 restarting = false;
 
+
                 setTimeout(
                     restartRecognition,
                     500
@@ -1705,6 +2041,7 @@ function restartRecognition() {
             }
 
         },
+
         350
     );
 }
@@ -1917,6 +2254,7 @@ languageSelect.addEventListener(
                     }
 
                 },
+
                 500
             );
         }
@@ -1925,7 +2263,7 @@ languageSelect.addEventListener(
 
 
 /* =========================================================
-   FULLSCREEN
+   FULL SCREEN
 ========================================================= */
 
 fullscreenBtn.addEventListener(
@@ -1974,11 +2312,12 @@ window.addEventListener(
 
 
 /* =========================================================
-   INITIALIZE DISPLAY
+   INITIAL DISPLAY
 ========================================================= */
 
 captionText.style.fontSize =
     sizeSelect.value + "px";
+
 
 hideCaption();
 
@@ -1987,7 +2326,9 @@ if (
     SpeechRecognition
 ) {
 
-    setStatus("Ready");
+    setStatus(
+        "Ready"
+    );
 
 }
 
