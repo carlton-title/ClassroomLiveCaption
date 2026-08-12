@@ -1,120 +1,88 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+function processSpelling(text) {
 
-<title>Classroom Live Caption</title>
+    const cleaned = text
+        .trim()
+        .replace(/[.!?]+$/g, "")
+        .trim();
 
-<style>
-html, body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-}
+    /*
+        SPELL + WORD
 
-body {
-    background: black;
-    color: white;
-    font-family: Arial, sans-serif;
-}
+        Example:
+        "spell specific"
 
-#controls {
-    height: 60px;
-    background: #222;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 0 15px;
-}
+        Result:
+        S-P-E-C-I-F-I-C
+    */
 
-button {
-    background: #444;
-    color: white;
-    border: 1px solid #777;
-    padding: 10px 15px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 16px;
-}
+    const directWord = extractSpellCommand(cleaned);
 
-#captionArea {
-    height: calc(100vh - 60px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-}
+    if (directWord) {
 
-#caption {
-    font-size: 90px;
-    font-weight: bold;
-}
-</style>
-</head>
+        spellingMode = false;
+        waitingForSpellingWord = false;
 
-<body>
-
-<div id="controls">
-
-    <button id="startBtn">
-        ▶ Start Listening
-    </button>
-
-    <button id="stopBtn">
-        ■ Stop
-    </button>
-
-    <button id="clearBtn">
-        Clear
-    </button>
-
-    <button id="fullscreenBtn">
-        ⛶ Full Screen
-    </button>
-
-</div>
-
-<div id="captionArea">
-
-    <div id="caption">
-        CLASSROOM LIVE CAPTION
-    </div>
-
-</div>
-
-<script>
-
-const startBtn = document.getElementById("startBtn");
-const stopBtn = document.getElementById("stopBtn");
-const clearBtn = document.getElementById("clearBtn");
-const fullscreenBtn = document.getElementById("fullscreenBtn");
-const caption = document.getElementById("caption");
-
-startBtn.addEventListener("click", function() {
-    caption.textContent = "LISTENING...";
-});
-
-stopBtn.addEventListener("click", function() {
-    caption.textContent = "STOPPED";
-});
-
-clearBtn.addEventListener("click", function() {
-    caption.textContent = "";
-});
-
-fullscreenBtn.addEventListener("click", function() {
-
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen();
-    } else {
-        document.exitFullscreen();
+        return spellWord(directWord);
     }
 
-});
 
-</script>
+    /*
+        SPELL BY ITSELF
 
-</body>
-</html>
+        Example:
+        "spell"
+
+        The next single word will be spelled.
+    */
+
+    if (isSpellCommand(cleaned)) {
+
+        spellingMode = true;
+        waitingForSpellingWord = true;
+
+        return "";
+    }
+
+
+    /*
+        SPELL MODE
+
+        If "spell" was spoken previously,
+        the next single word is spelled.
+    */
+
+    if (
+        spellingMode &&
+        waitingForSpellingWord
+    ) {
+
+        const words = cleaned.split(/\s+/);
+
+        if (words.length === 1) {
+
+            const word = words[0];
+
+            if (/^[A-Za-z]+$/.test(word)) {
+
+                spellingMode = false;
+                waitingForSpellingWord = false;
+
+                return spellWord(word);
+            }
+        }
+
+
+        /*
+            The next speech was not a single word.
+
+            Cancel spelling mode and allow
+            normal transcription to handle it.
+        */
+
+        spellingMode = false;
+        waitingForSpellingWord = false;
+    }
+
+
+    return null;
+}
