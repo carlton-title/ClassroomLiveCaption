@@ -3,11 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Classroom Live Caption</title>
 
 <style>
-
 * {
     box-sizing: border-box;
 }
@@ -23,422 +21,213 @@ body {
 }
 
 body {
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
 }
 
-
 /* =========================================================
    CONTROLS
-========================================================= */
+   ========================================================= */
 
 #controls {
-
-    position: fixed;
-
-    top: 0;
-    left: 0;
-
-    width: 100%;
-
-    z-index: 100;
-
+    flex-shrink: 0;
     display: flex;
     align-items: center;
-
     gap: 8px;
-
     padding: 10px 12px;
-
     background: #171717;
-
     border-bottom: 1px solid #444;
-
     flex-wrap: wrap;
 }
 
-
 button,
 select {
-
     font-family: Arial, Helvetica, sans-serif;
-
     font-size: 15px;
-
     padding: 9px 12px;
-
     border: 1px solid #666;
-
     border-radius: 6px;
-
     background: #292929;
-
     color: #fff;
-
     cursor: pointer;
 }
 
-
 button:hover,
 select:hover {
-
     background: #383838;
 }
 
-
 button:disabled {
-
     opacity: 0.45;
-
     cursor: default;
 }
 
-
 label {
-
     display: flex;
-
     align-items: center;
-
     gap: 5px;
-
     font-size: 14px;
 }
-
 
 #status {
-
     margin-left: auto;
-
     color: #aaa;
-
     font-size: 14px;
 }
-
 
 /* =========================================================
    CAPTION AREA
-
-   CENTER OF SCREEN
-========================================================= */
+   ORIGINAL CENTERED POSITION
+   ========================================================= */
 
 #captionArea {
-
-    position: fixed;
-
-    top: 0;
-    left: 0;
-
+    flex: 1;
+    min-height: 0;
     width: 100%;
-    height: 100%;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    padding: 12vh 7vw;
-
-    pointer-events: none;
-
-    z-index: 10;
-}
-
-
-#caption {
-
-    width: 100%;
-
-    max-width: 1700px;
 
     display: flex;
 
     justify-content: center;
-
     align-items: center;
 
-    text-align: center;
-}
+    padding: 3vh 5vw;
 
+    overflow: hidden;
+}
 
 /* =========================================================
-   CAPTION BOX
+   CAPTION
+   ========================================================= */
 
-   MAXIMUM TWO LINES
-========================================================= */
-
-#captionText {
-
-    width: auto;
-
-    max-width: 1600px;
-
-    padding: 14px 28px;
-
-    border-radius: 12px;
-
-    background: rgba(0, 0, 0, 0.72);
-
-    color: #fff;
+#caption {
+    width: 100%;
+    max-width: 1900px;
 
     text-align: center;
 
     font-size: 90px;
-
     font-weight: 700;
-
     line-height: 1.12;
+}
 
-    /*
-       Maximum two lines.
-    */
+/* =========================================================
+   CAPTION TEXT
 
-    display: -webkit-box;
+   Maximum two lines.
+   Font is reduced by JavaScript when necessary.
+   ========================================================= */
 
-    -webkit-box-orient: vertical;
-
-    -webkit-line-clamp: 2;
-
-    overflow: hidden;
-
-    /*
-       Prevent the box from becoming
-       unnecessarily tall.
-    */
+#captionText {
+    width: 100%;
 
     max-height: 2.24em;
 
-    /*
-       Keep normal words intact.
-    */
+    overflow: hidden;
+
+    text-align: center;
 
     overflow-wrap: normal;
-
     word-break: normal;
-
-    /*
-       Readability.
-    */
-
-    text-shadow:
-
-        2px 2px 4px #000,
-
-        -2px -2px 4px #000,
-
-        2px -2px 4px #000,
-
-        -2px 2px 4px #000;
 }
-
-
-/* =========================================================
-   INTERIM SPEECH
-========================================================= */
 
 #captionText.interim {
-
-    opacity: 0.72;
+    opacity: 0.75;
 }
 
-
-/* =========================================================
-   SPELLING MODE
-========================================================= */
-
 #captionText.spelling {
-
     font-weight: 900;
-
     letter-spacing: 0.08em;
-
     text-transform: uppercase;
 }
 
-
-/* =========================================================
-   HIDDEN
-========================================================= */
-
 .hidden {
-
     visibility: hidden;
 }
 
-
 /* =========================================================
-   MOBILE
-========================================================= */
+   SMALL SCREENS
+   ========================================================= */
 
 @media (max-width: 700px) {
 
-    #controls {
-
-        padding: 8px;
-    }
-
-
-    button,
-    select {
-
-        font-size: 14px;
-
-        padding: 8px 10px;
-    }
-
-
     #status {
-
-        width: 100%;
-
         margin-left: 0;
+        width: 100%;
     }
 
-
-    #captionArea {
-
-        padding: 10vh 4vw;
-    }
-
-
-    #captionText {
-
+    #caption {
         font-size: 55px;
-
-        padding: 10px 18px;
-
-        border-radius: 8px;
     }
 }
-
 </style>
-
 </head>
-
 
 <body>
 
-
-<!-- =======================================================
-     CONTROLS
-======================================================= -->
-
 <div id="controls">
 
-    <button id="startBtn">
-        ▶ Start Listening
-    </button>
+    <button id="startBtn">▶ Start Listening</button>
 
+    <button id="stopBtn" disabled>■ Stop</button>
 
-    <button id="stopBtn" disabled>
-        ■ Stop
-    </button>
+    <button id="clearBtn">Clear</button>
 
-
-    <button id="clearBtn">
-        Clear
-    </button>
-
-
-    <button id="fullscreenBtn">
-        ⛶ Full Screen
-    </button>
-
+    <button id="fullscreenBtn">⛶ Full Screen</button>
 
     <label>
-
         Size:
-
         <select id="sizeSelect">
-
             <option value="50">50</option>
-
             <option value="60">60</option>
-
             <option value="70">70</option>
-
             <option value="80">80</option>
-
-            <option value="90" selected>
-                90
-            </option>
-
+            <option value="90" selected>90</option>
             <option value="100">100</option>
-
             <option value="110">110</option>
-
             <option value="120">120</option>
-
         </select>
-
     </label>
-
 
     <label>
-
         Language:
-
         <select id="languageSelect">
-
-            <option value="en-US">
-                English
-            </option>
-
-            <option value="th-TH">
-                Thai
-            </option>
-
+            <option value="en-US">English</option>
+            <option value="th-TH">Thai</option>
         </select>
-
     </label>
 
-
-    <span id="status">
-        Ready
-    </span>
+    <span id="status">Ready</span>
 
 </div>
 
-
-
-<!-- =======================================================
-     CAPTION
-======================================================= -->
 
 <main id="captionArea">
 
     <div id="caption">
 
-        <div
-            id="captionText"
-            class="hidden">
-        </div>
+        <div id="captionText" class="hidden"></div>
 
     </div>
 
 </main>
 
 
-
 <script>
-
 "use strict";
-
 
 /* =========================================================
    SPEECH RECOGNITION
-========================================================= */
+   ========================================================= */
 
 const SpeechRecognition =
-
     window.SpeechRecognition ||
-
     window.webkitSpeechRecognition;
 
 
 /* =========================================================
    ELEMENTS
-========================================================= */
+   ========================================================= */
 
 const startBtn =
     document.getElementById("startBtn");
@@ -461,13 +250,16 @@ const languageSelect =
 const status =
     document.getElementById("status");
 
+const caption =
+    document.getElementById("caption");
+
 const captionText =
     document.getElementById("captionText");
 
 
 /* =========================================================
    STATE
-========================================================= */
+   ========================================================= */
 
 let recognition = null;
 
@@ -475,7 +267,9 @@ let listening = false;
 
 let manuallyStopped = false;
 
-let restarting = false;
+let finalCaption = "";
+
+let interimCaption = "";
 
 let silenceTimer = null;
 
@@ -483,15 +277,26 @@ let spellingMode = false;
 
 let waitingForSpellingWord = false;
 
+let lastFinalSentence = "";
+
+
+/*
+   How long the caption remains after speech stops.
+*/
 
 const SILENCE_DELAY = 1800;
 
-const MIN_FONT_SIZE = 32;
+
+/*
+   Smallest font size allowed.
+*/
+
+const MIN_FONT_SIZE = 35;
 
 
 /* =========================================================
    STATUS
-========================================================= */
+   ========================================================= */
 
 function setStatus(message) {
 
@@ -500,64 +305,60 @@ function setStatus(message) {
 
 
 /* =========================================================
-   CAPTION VISIBILITY
-========================================================= */
-
-function showCaption() {
-
-    captionText.classList.remove(
-        "hidden"
-    );
-}
-
-
-function hideCaption() {
-
-    captionText.classList.add(
-        "hidden"
-    );
-}
-
-
-/* =========================================================
-   CLEAR CAPTION
-========================================================= */
+   CLEAR
+   ========================================================= */
 
 function clearCaption() {
 
-    cancelSilenceTimer();
+    finalCaption = "";
+
+    interimCaption = "";
 
     spellingMode = false;
 
     waitingForSpellingWord = false;
 
+    lastFinalSentence = "";
+
     captionText.textContent = "";
 
-    captionText.classList.remove(
-        "interim"
-    );
+    captionText.classList.add("hidden");
 
-    captionText.classList.remove(
-        "spelling"
-    );
+    captionText.classList.remove("interim");
 
-    hideCaption();
+    captionText.classList.remove("spelling");
+
+    cancelSilenceTimer();
+
+    resetFontSize();
+}
+
+
+/* =========================================================
+   SHOW / HIDE
+   ========================================================= */
+
+function showCaption() {
+
+    captionText.classList.remove("hidden");
+}
+
+
+function hideCaption() {
+
+    captionText.classList.add("hidden");
 }
 
 
 /* =========================================================
    SILENCE TIMER
-========================================================= */
+   ========================================================= */
 
 function cancelSilenceTimer() {
 
-    if (
-        silenceTimer !== null
-    ) {
+    if (silenceTimer !== null) {
 
-        clearTimeout(
-            silenceTimer
-        );
+        clearTimeout(silenceTimer);
 
         silenceTimer = null;
     }
@@ -568,34 +369,37 @@ function startSilenceTimer() {
 
     cancelSilenceTimer();
 
+    silenceTimer = setTimeout(function() {
 
-    silenceTimer = setTimeout(
-        function() {
+        finalCaption = "";
 
-            captionText.textContent = "";
+        interimCaption = "";
 
-            captionText.classList.remove(
-                "interim"
-            );
+        spellingMode = false;
 
-            captionText.classList.remove(
-                "spelling"
-            );
+        waitingForSpellingWord = false;
 
-            hideCaption();
+        lastFinalSentence = "";
 
-            silenceTimer = null;
+        captionText.textContent = "";
 
-        },
+        captionText.classList.remove("interim");
 
-        SILENCE_DELAY
-    );
+        captionText.classList.remove("spelling");
+
+        hideCaption();
+
+        resetFontSize();
+
+        silenceTimer = null;
+
+    }, SILENCE_DELAY);
 }
 
 
 /* =========================================================
    FILLER WORDS
-========================================================= */
+   ========================================================= */
 
 function removeFillers(text) {
 
@@ -616,8 +420,8 @@ function removeFillers(text) {
 
 
 /* =========================================================
-   IMMEDIATE REPEATED WORDS
-========================================================= */
+   REPEATED WORDS
+   ========================================================= */
 
 function removeImmediateRepeats(text) {
 
@@ -627,16 +431,11 @@ function removeImmediateRepeats(text) {
     const result = [];
 
 
-    for (
-        const word of words
-    ) {
+    for (const word of words) {
 
         const current =
-
             word
-
                 .toLowerCase()
-
                 .replace(
                     /[.,!?;:"'()[\]{}-]/g,
                     ""
@@ -644,25 +443,14 @@ function removeImmediateRepeats(text) {
 
 
         const previous =
-
             result.length
-
-                ?
-
-                result[
-                    result.length - 1
-                ]
-
+                ? result[result.length - 1]
                     .toLowerCase()
-
                     .replace(
                         /[.,!?;:"'()[\]{}-]/g,
                         ""
                     )
-
-                :
-
-                "";
+                : "";
 
 
         if (
@@ -684,74 +472,43 @@ function removeImmediateRepeats(text) {
 
 /* =========================================================
    SPOKEN PUNCTUATION
-========================================================= */
+   ========================================================= */
 
 function convertSpokenPunctuation(text) {
 
     let t = text;
 
 
+    /*
+       These are retained because they are explicit
+       spoken punctuation commands.
+    */
+
     const replacements = [
 
-        [
-            /\bnew paragraph\b/gi,
-            "\n\n"
-        ],
+        [/\bquestion mark\b/gi, "?"],
 
-        [
-            /\bnew line\b/gi,
-            "\n"
-        ],
+        [/\bexclamation mark\b/gi, "!"],
 
-        [
-            /\bquestion mark\b/gi,
-            "?"
-        ],
+        [/\bexclamation point\b/gi, "!"],
 
-        [
-            /\bexclamation mark\b/gi,
-            "!"
-        ],
+        [/\bcomma\b/gi, ","],
 
-        [
-            /\bexclamation point\b/gi,
-            "!"
-        ],
+        [/\bfull stop\b/gi, "."],
 
-        [
-            /\bcomma\b/gi,
-            ","
-        ],
+        [/\bperiod\b/gi, "."],
 
-        [
-            /\bfull stop\b/gi,
-            "."
-        ],
+        [/\bcolon\b/gi, ":"],
 
-        [
-            /\bperiod\b/gi,
-            "."
-        ],
+        [/\bsemicolon\b/gi, ";"],
 
-        [
-            /\bcolon\b/gi,
-            ":"
-        ],
+        [/\bopen parenthesis\b/gi, "("],
 
-        [
-            /\bsemicolon\b/gi,
-            ";"
-        ],
+        [/\bclose parenthesis\b/gi, ")"],
 
-        [
-            /\bopen parenthesis\b/gi,
-            "("
-        ],
+        [/\bnew line\b/gi, "\n"],
 
-        [
-            /\bclose parenthesis\b/gi,
-            ")"
-        ]
+        [/\bnew paragraph\b/gi, "\n\n"]
     ];
 
 
@@ -773,10 +530,10 @@ function convertSpokenPunctuation(text) {
 
 
 /* =========================================================
-   NUMBER WORD TABLES
-========================================================= */
+   NUMBER WORDS
+   ========================================================= */
 
-const units = {
+const numberUnits = {
 
     zero: 0,
 
@@ -820,7 +577,7 @@ const units = {
 };
 
 
-const tens = {
+const numberTens = {
 
     twenty: 20,
 
@@ -841,10 +598,10 @@ const tens = {
 
 
 /* =========================================================
-   NUMBER WORDS → VALUE
-========================================================= */
+   NUMBER PARSER
+   ========================================================= */
 
-function numberWordsToValue(words) {
+function wordsToNumber(words) {
 
     let total = 0;
 
@@ -853,58 +610,53 @@ function numberWordsToValue(words) {
     let found = false;
 
 
-    for (
-        const word of words
-    ) {
+    for (const word of words) {
 
         if (
-            units[word] !== undefined
+            numberUnits[word] !== undefined
         ) {
 
             current +=
-                units[word];
+                numberUnits[word];
 
             found = true;
+
         }
 
         else if (
-            tens[word] !== undefined
+            numberTens[word] !== undefined
         ) {
 
             current +=
-                tens[word];
+                numberTens[word];
 
             found = true;
+
         }
 
         else if (
             word === "hundred"
         ) {
 
-            if (
-                current === 0
-            ) {
+            if (current === 0) {
 
                 current = 1;
             }
 
-
             current *= 100;
 
             found = true;
+
         }
 
         else if (
             word === "thousand"
         ) {
 
-            if (
-                current === 0
-            ) {
+            if (current === 0) {
 
                 current = 1;
             }
-
 
             total +=
                 current * 1000;
@@ -912,6 +664,7 @@ function numberWordsToValue(words) {
             current = 0;
 
             found = true;
+
         }
 
         else {
@@ -922,24 +675,50 @@ function numberWordsToValue(words) {
 
 
     return found
-
-        ?
-
-        total + current
-
-        :
-
-        null;
+        ? total + current
+        : null;
 }
 
 
 /* =========================================================
-   YEAR CONVERSION
+   CONTEXT-AWARE NUMBER CONVERSION
+   =========================================================
+
+   IMPORTANT:
+
+   "only one"
+       → "only one"
+
+   "one student"
+       → "one student"
+
+   We do NOT automatically convert "one"
+   because Chrome's recognition does not tell
+   JavaScript whether the speaker means:
+
+       one = the word
+
+   or
+
+       1 = a numerical value.
+
+   Years such as:
+
+       twenty twenty-seven
+       → 2027
+
+       twenty twenty-six
+       → 2026
+
+       nineteen ninety-five
+       → 1995
+
+   are recognized separately.
 ========================================================= */
 
-function convertYearPhrase(text) {
+function convertYears(text) {
 
-    const words =
+    const tokens =
         text.split(/\s+/);
 
     const result = [];
@@ -948,15 +727,12 @@ function convertYearPhrase(text) {
 
 
     while (
-        i < words.length
+        i < tokens.length
     ) {
 
-        const current =
-
-            words[i]
-
+        const first =
+            tokens[i]
                 .toLowerCase()
-
                 .replace(
                     /[^a-z]/g,
                     ""
@@ -964,109 +740,81 @@ function convertYearPhrase(text) {
 
 
         /*
-           2000 + number
-
-           two thousand twenty-six
-           → 2026
+           twenty twenty-seven
         */
 
         if (
-            current === "two" &&
-            i + 2 < words.length
+
+            first === "twenty"
+
+            &&
+
+            i + 1 < tokens.length
+
         ) {
 
             const second =
-
-                words[i + 1]
-
+                tokens[i + 1]
                     .toLowerCase()
-
                     .replace(
                         /[^a-z]/g,
                         ""
                     );
 
 
-            const third =
-
-                words[i + 2]
-
-                    .toLowerCase()
-
-                    .replace(
-                        /[^a-z]/g,
-                        ""
-                    );
+            const secondValue =
+                numberUnits[second];
 
 
             if (
-                second === "thousand"
-            ) {
 
-                const value =
-                    numberWordsToValue([
-                        third
-                    ]);
+                secondValue !== undefined
 
+                &&
 
-                if (
-                    value !== null &&
-                    value >= 0 &&
-                    value <= 99
-                ) {
+                secondValue >= 0
 
-                    result.push(
-                        String(
-                            2000 + value
-                        )
-                    );
+                &&
 
-                    i += 3;
+                secondValue <= 19
 
-                    continue;
-                }
-            }
-        }
-
-
-        /*
-           twenty twenty-six
-
-           → 2026
-        */
-
-        if (
-            current === "twenty" &&
-            i + 1 < words.length
-        ) {
-
-            const second =
-
-                words[i + 1]
-
-                    .toLowerCase()
-
-                    .replace(
-                        /[^a-z]/g,
-                        ""
-                    );
-
-
-            const value =
-                numberWordsToValue([
-                    second
-                ]);
-
-
-            if (
-                value !== null &&
-                value >= 0 &&
-                value <= 99
             ) {
 
                 result.push(
                     String(
-                        2000 + value
+                        2000 +
+                        secondValue
+                    )
+                );
+
+                i += 2;
+
+                continue;
+            }
+
+
+            const secondTen =
+                numberTens[second];
+
+
+            if (
+
+                secondTen !== undefined
+
+                &&
+
+                secondTen >= 20
+
+                &&
+
+                secondTen <= 99
+
+            ) {
+
+                result.push(
+                    String(
+                        2000 +
+                        secondTen
                     )
                 );
 
@@ -1079,21 +827,21 @@ function convertYearPhrase(text) {
 
         /*
            nineteen ninety-five
-
-           → 1995
         */
 
         if (
-            current === "nineteen" &&
-            i + 1 < words.length
+
+            first === "nineteen"
+
+            &&
+
+            i + 1 < tokens.length
+
         ) {
 
             const second =
-
-                words[i + 1]
-
+                tokens[i + 1]
                     .toLowerCase()
-
                     .replace(
                         /[^a-z]/g,
                         ""
@@ -1101,20 +849,29 @@ function convertYearPhrase(text) {
 
 
             const value =
-                numberWordsToValue([
-                    second
-                ]);
+                numberTens[second] !== undefined
+                    ? numberTens[second]
+                    : numberUnits[second];
 
 
             if (
-                value !== null &&
-                value >= 0 &&
+
+                value !== undefined
+
+                &&
+
+                value >= 0
+
+                &&
+
                 value <= 99
+
             ) {
 
                 result.push(
                     String(
-                        1900 + value
+                        1900 +
+                        value
                     )
                 );
 
@@ -1126,7 +883,7 @@ function convertYearPhrase(text) {
 
 
         result.push(
-            words[i]
+            tokens[i]
         );
 
         i++;
@@ -1138,194 +895,16 @@ function convertYearPhrase(text) {
 
 
 /* =========================================================
-   ORDINARY NUMBER CONVERSION
+   NORMAL SPEECH
+   ========================================================= */
 
-   ONE IS PROTECTED.
+function processNormalSpeech(text) {
 
-   Therefore:
-
-   "only one"
-       remains
-   "only one"
-
-========================================================= */
-
-function convertOrdinaryNumbers(text) {
-
-    const words =
-        text.split(/\s+/);
-
-    const result = [];
-
-
-    for (
-        const word of words
-    ) {
-
-        const clean =
-
-            word
-
-                .toLowerCase()
-
-                .replace(
-                    /[^a-z]/g,
-                    ""
-                );
-
-
-        /*
-           Protect "one".
-        */
-
-        if (
-            clean === "one"
-        ) {
-
-            result.push(word);
-
-            continue;
-        }
-
-
-        /*
-           Convert 2–19.
-        */
-
-        if (
-            units[clean] !== undefined &&
-            units[clean] >= 2
-        ) {
-
-            result.push(
-                String(
-                    units[clean]
-                )
-            );
-
-            continue;
-        }
-
-
-        /*
-           Convert 20, 30, etc.
-        */
-
-        if (
-            tens[clean] !== undefined
-        ) {
-
-            result.push(
-                String(
-                    tens[clean]
-                )
-            );
-
-            continue;
-        }
-
-
-        result.push(word);
-    }
-
-
-    return result.join(" ");
-}
-
-
-/* =========================================================
-   CONTEXT-AWARE NUMBER PROCESSING
-========================================================= */
-
-function convertNumbersContextually(text) {
-
-    let result =
-        convertYearPhrase(text);
-
-
-    result =
-        convertOrdinaryNumbers(
-            result
-        );
-
-
-    return result;
-}
-
-
-/* =========================================================
-   QUESTION DETECTION
-========================================================= */
-
-function addQuestionMark(text) {
-
-    const t =
-        text.trim();
-
-
-    if (!t) {
+    if (!text) {
 
         return "";
     }
 
-
-    /*
-       Already has punctuation.
-    */
-
-    if (
-        /[.!?]$/.test(t)
-    ) {
-
-        return t;
-    }
-
-
-    /*
-       Direct auxiliary questions:
-
-       Is he...
-       Are they...
-       Did you...
-       Can you...
-       Will you...
-    */
-
-    const auxiliaryQuestion =
-
-        /^(am|is|are|was|were|do|does|did|can|could|will|would|should|shall|may|might|have|has|had)\b/i;
-
-
-    /*
-       WH-question structures.
-
-       Only add ? when the sentence contains
-       a recognizable question structure.
-    */
-
-    const whQuestion =
-
-        /^(who|what|when|where|why|how|which|whose|whom)\b.*\b(is|are|was|were|do|does|did|can|could|will|would|should|have|has|had)\b/i;
-
-
-    if (
-        auxiliaryQuestion.test(t) ||
-        whQuestion.test(t)
-    ) {
-
-        return t + "?";
-    }
-
-
-    return t;
-}
-
-
-/* =========================================================
-   NORMAL SPEECH
-========================================================= */
-
-function processSpeech(text) {
 
     let t =
         text.trim();
@@ -1344,11 +923,19 @@ function processSpeech(text) {
 
 
     /*
-       Context-aware numbers.
+       Only convert recognizable YEAR expressions.
+
+       We deliberately do NOT convert:
+
+           one → 1
+           two → 2
+           three → 3
+
+       because that destroys normal English speech.
     */
 
     t =
-        convertNumbersContextually(t);
+        convertYears(t);
 
 
     t =
@@ -1372,8 +959,16 @@ function processSpeech(text) {
             .trim();
 
 
-    t =
-        addQuestionMark(t);
+    /*
+       IMPORTANT:
+
+       We no longer automatically put a question mark
+       on every sentence beginning with words such as
+       "what", "how", "why", etc.
+
+       The browser's recognition result is left alone
+       unless the speaker explicitly says punctuation.
+    */
 
 
     return t;
@@ -1382,19 +977,16 @@ function processSpeech(text) {
 
 /* =========================================================
    SPELLING
-========================================================= */
+   ========================================================= */
 
 function spellWord(word) {
 
     const clean =
-
         word
-
             .replace(
                 /[^A-Za-z]/g,
                 ""
             )
-
             .toUpperCase();
 
 
@@ -1410,19 +1002,67 @@ function spellWord(word) {
 }
 
 
-function processSpelling(text) {
+function extractSpellCommand(text) {
 
     const cleaned =
-
         text
-
             .trim()
-
             .replace(
                 /[.!?]+$/g,
                 ""
             )
+            .trim();
 
+
+    const match =
+        cleaned.match(
+            /^(?:please\s+)?spell(?:\s+the\s+word)?\s+([A-Za-z]+)$/i
+        );
+
+
+    if (!match) {
+
+        return null;
+    }
+
+
+    return match[1];
+}
+
+
+function isSpellCommand(text) {
+
+    const cleaned =
+        text
+            .trim()
+            .replace(
+                /[.!?]+$/g,
+                ""
+            )
+            .trim()
+            .toLowerCase();
+
+
+    return (
+
+        cleaned === "spell"
+
+        ||
+
+        cleaned === "please spell"
+    );
+}
+
+
+function processSpelling(text) {
+
+    const cleaned =
+        text
+            .trim()
+            .replace(
+                /[.!?]+$/g,
+                ""
+            )
             .trim();
 
 
@@ -1430,23 +1070,20 @@ function processSpelling(text) {
        "spell apple"
     */
 
-    const direct =
-
-        cleaned.match(
-
-            /^(?:please\s+)?spell(?:\s+the\s+word)?\s+([A-Za-z]+)$/i
-
+    const directWord =
+        extractSpellCommand(
+            cleaned
         );
 
 
-    if (direct) {
+    if (directWord) {
 
         spellingMode = false;
 
         waitingForSpellingWord = false;
 
         return spellWord(
-            direct[1]
+            directWord
         );
     }
 
@@ -1456,8 +1093,7 @@ function processSpelling(text) {
     */
 
     if (
-        /^(?:please\s+)?spell$/i
-            .test(cleaned)
+        isSpellCommand(cleaned)
     ) {
 
         spellingMode = true;
@@ -1473,31 +1109,46 @@ function processSpelling(text) {
     */
 
     if (
-        spellingMode &&
+
+        spellingMode
+
+        &&
+
         waitingForSpellingWord
+
     ) {
 
+        const words =
+            cleaned.split(/\s+/);
+
+
         if (
-            /^[A-Za-z]+$/.test(
-                cleaned
-            )
+            words.length === 1
         ) {
 
-            spellingMode = false;
+            const word =
+                words[0];
 
-            waitingForSpellingWord =
-                false;
 
-            return spellWord(
-                cleaned
-            );
+            if (
+                /^[A-Za-z]+$/.test(word)
+            ) {
+
+                spellingMode = false;
+
+                waitingForSpellingWord =
+                    false;
+
+                return spellWord(
+                    word
+                );
+            }
         }
 
 
         spellingMode = false;
 
-        waitingForSpellingWord =
-            false;
+        waitingForSpellingWord = false;
     }
 
 
@@ -1506,51 +1157,27 @@ function processSpelling(text) {
 
 
 /* =========================================================
-   DISPLAY CAPTION
-========================================================= */
+   RESET FONT SIZE
+   ========================================================= */
 
-function displayCaption(
-    text,
-    interim = false
-) {
+function resetFontSize() {
 
-    if (
-        !text ||
-        !text.trim()
-    ) {
-
-        hideCaption();
-
-        return;
-    }
-
-
-    captionText.textContent =
-        text.trim();
-
-
-    captionText.classList.toggle(
-        "interim",
-        interim
-    );
-
-
-    showCaption();
-
-
-    requestAnimationFrame(
-        fitCaption
-    );
+    caption.style.fontSize =
+        sizeSelect.value + "px";
 }
 
 
 /* =========================================================
    FONT FITTING
+   =========================================================
 
-   The caption starts at the selected size.
+   This is the important part.
 
-   If it is too large for two lines,
-   it gradually becomes smaller.
+   It starts at the selected font size.
+
+   If the text needs more than two lines,
+   it reduces the font until it fits.
+
 ========================================================= */
 
 function fitCaption() {
@@ -1569,9 +1196,26 @@ function fitCaption() {
         );
 
 
-    captionText.style.fontSize =
+    caption.style.fontSize =
         fontSize + "px";
 
+
+    /*
+       Maximum height for TWO lines.
+    */
+
+    const maxHeight =
+        fontSize * 1.12 * 2;
+
+
+    captionText.style.maxHeight =
+        maxHeight + "px";
+
+
+    /*
+       Reduce font until the text fits
+       inside the two-line area.
+    */
 
     while (
 
@@ -1587,17 +1231,73 @@ function fitCaption() {
         fontSize -= 2;
 
 
-        captionText.style.fontSize =
+        caption.style.fontSize =
             fontSize + "px";
+
+
+        captionText.style.maxHeight =
+            (
+                fontSize *
+                1.12 *
+                2
+            ) + "px";
     }
 }
 
 
 /* =========================================================
-   FINAL SPEECH
-========================================================= */
+   RENDER
+   ========================================================= */
 
-function showFinalSpeech(text) {
+function renderCaption() {
+
+    const display =
+        [
+            finalCaption,
+            interimCaption
+        ]
+
+            .filter(Boolean)
+
+            .join(" ")
+
+            .trim();
+
+
+    if (!display) {
+
+        captionText.textContent = "";
+
+        hideCaption();
+
+        return;
+    }
+
+
+    captionText.textContent =
+        display;
+
+
+    captionText.classList.toggle(
+        "interim",
+        Boolean(interimCaption)
+    );
+
+
+    showCaption();
+
+
+    requestAnimationFrame(
+        fitCaption
+    );
+}
+
+
+/* =========================================================
+   FINAL SPEECH
+   ========================================================= */
+
+function addFinalSpeech(text) {
 
     if (
         !text.trim()
@@ -1608,30 +1308,31 @@ function showFinalSpeech(text) {
 
 
     /*
-       SPELLING COMMAND
+       Check spelling first.
     */
 
-    const spelling =
+    const spellingResult =
         processSpelling(text);
 
 
     if (
-        spelling !== null
+        spellingResult !== null
     ) {
 
         if (
-            spelling
+            spellingResult
         ) {
+
+            finalCaption =
+                spellingResult;
+
+            interimCaption = "";
 
             captionText.classList.add(
                 "spelling"
             );
 
-
-            displayCaption(
-                spelling,
-                false
-            );
+            renderCaption();
         }
 
 
@@ -1640,19 +1341,70 @@ function showFinalSpeech(text) {
 
 
     /*
-       NORMAL SPEECH
+       If waiting for spelling word,
+       don't display "spell" itself.
     */
 
-    const processed =
-        processSpeech(text);
-
-
     if (
-        !processed
+
+        spellingMode
+
+        &&
+
+        waitingForSpellingWord
+
     ) {
 
         return;
     }
+
+
+    const processed =
+        processNormalSpeech(text);
+
+
+    if (
+        !processed.trim()
+    ) {
+
+        return;
+    }
+
+
+    /*
+       Don't display exact duplicate recognition.
+    */
+
+    if (
+
+        processed.toLowerCase() ===
+        lastFinalSentence.toLowerCase()
+
+    ) {
+
+        return;
+    }
+
+
+    /*
+       IMPORTANT:
+
+       Keep the caption concise.
+
+       The current recognized sentence is shown
+       rather than allowing the entire conversation
+       to accumulate across the screen.
+    */
+
+    finalCaption =
+        processed;
+
+
+    interimCaption = "";
+
+
+    lastFinalSentence =
+        processed;
 
 
     captionText.classList.remove(
@@ -1660,66 +1412,48 @@ function showFinalSpeech(text) {
     );
 
 
-    /*
-       IMPORTANT:
-
-       We show the current caption rather
-       than accumulating the entire speech.
-    */
-
-    displayCaption(
-        processed,
-        false
-    );
+    renderCaption();
 }
 
 
 /* =========================================================
-   CREATE RECOGNITION
-========================================================= */
+   SPEECH RECOGNITION SETUP
+   ========================================================= */
 
-function createRecognition() {
+if (!SpeechRecognition) {
 
-    if (
-        !SpeechRecognition
-    ) {
+    startBtn.disabled = true;
 
-        startBtn.disabled = true;
+    stopBtn.disabled = true;
 
-        stopBtn.disabled = true;
+    setStatus(
+        "Speech recognition is not supported. Use Google Chrome."
+    );
 
-        setStatus(
-            "Use Google Chrome for speech recognition."
-        );
+} else {
 
-        return null;
-    }
-
-
-    const r =
+    recognition =
         new SpeechRecognition();
 
 
-    r.continuous = true;
+    recognition.continuous = true;
 
-    r.interimResults = true;
+    recognition.interimResults = true;
 
-    r.maxAlternatives = 1;
+    recognition.maxAlternatives = 1;
 
-    r.lang =
+    recognition.lang =
         languageSelect.value;
 
 
     /* =====================================================
        START
-    ===================================================== */
+       ===================================================== */
 
-    r.onstart =
+    recognition.onstart =
         function() {
 
             listening = true;
-
-            restarting = false;
 
             startBtn.disabled = true;
 
@@ -1733,9 +1467,9 @@ function createRecognition() {
 
     /* =====================================================
        RESULT
-    ===================================================== */
+       ===================================================== */
 
-    r.onresult =
+    recognition.onresult =
         function(event) {
 
             cancelSilenceTimer();
@@ -1763,15 +1497,12 @@ function createRecognition() {
 
 
                 const transcript =
-
                     result[0]
                         .transcript
                         .trim();
 
 
-                if (
-                    !transcript
-                ) {
+                if (!transcript) {
 
                     continue;
                 }
@@ -1785,9 +1516,7 @@ function createRecognition() {
                         " " +
                         transcript;
 
-                }
-
-                else {
+                } else {
 
                     interimText +=
                         " " +
@@ -1797,14 +1526,14 @@ function createRecognition() {
 
 
             /*
-               FINAL CAPTION
+               FINAL SPEECH
             */
 
             if (
                 finalText.trim()
             ) {
 
-                showFinalSpeech(
+                addFinalSpeech(
                     finalText.trim()
                 );
 
@@ -1814,7 +1543,7 @@ function createRecognition() {
 
 
             /*
-               LIVE INTERIM CAPTION
+               INTERIM SPEECH
             */
 
             if (
@@ -1827,25 +1556,26 @@ function createRecognition() {
 
             ) {
 
-                const processed =
-                    processSpeech(
+                interimCaption =
+                    processNormalSpeech(
                         interimText.trim()
                     );
 
+            } else {
 
-                displayCaption(
-                    processed,
-                    true
-                );
+                interimCaption = "";
             }
+
+
+            renderCaption();
         };
 
 
     /* =====================================================
        ERROR
-    ===================================================== */
+       ===================================================== */
 
-    r.onerror =
+    recognition.onerror =
         function(event) {
 
             if (
@@ -1907,14 +1637,9 @@ function createRecognition() {
                 "no-speech"
             ) {
 
-                return;
-            }
-
-
-            if (
-                event.error ===
-                "aborted"
-            ) {
+                setStatus(
+                    "Listening..."
+                );
 
                 return;
             }
@@ -1929,13 +1654,10 @@ function createRecognition() {
 
     /* =====================================================
        END
-    ===================================================== */
+       ===================================================== */
 
-    r.onend =
+    recognition.onend =
         function() {
-
-            restarting = false;
-
 
             if (
 
@@ -1947,145 +1669,93 @@ function createRecognition() {
 
             ) {
 
-                restartRecognition();
-
-                return;
-            }
-
-
-            listening = false;
-
-            startBtn.disabled = false;
-
-            stopBtn.disabled = true;
-
-            setStatus(
-                "Stopped"
-            );
-        };
-
-
-    return r;
-}
-
-
-/* =========================================================
-   RESTART
-========================================================= */
-
-function restartRecognition() {
-
-    if (
-
-        !recognition
-
-        ||
-
-        !listening
-
-        ||
-
-        manuallyStopped
-
-        ||
-
-        restarting
-
-    ) {
-
-        return;
-    }
-
-
-    restarting = true;
-
-
-    setTimeout(
-        function() {
-
-            if (
-
-                !listening
-
-                ||
-
-                manuallyStopped
-
-            ) {
-
-                restarting = false;
-
-                return;
-            }
-
-
-            try {
-
-                recognition.lang =
-                    languageSelect.value;
-
-
-                recognition.start();
-
-            }
-
-            catch (error) {
-
-                restarting = false;
+                setStatus(
+                    "Listening..."
+                );
 
 
                 setTimeout(
-                    restartRecognition,
-                    500
+                    function() {
+
+                        if (
+
+                            !listening
+
+                            ||
+
+                            manuallyStopped
+
+                        ) {
+
+                            return;
+                        }
+
+
+                        try {
+
+                            recognition.lang =
+                                languageSelect.value;
+
+
+                            recognition.start();
+
+                        }
+
+                        catch (error) {
+
+                            /*
+                               Chrome may already be
+                               restarting.
+                            */
+                        }
+
+                    },
+
+                    300
+                );
+
+
+            } else {
+
+                listening = false;
+
+                startBtn.disabled = false;
+
+                stopBtn.disabled = true;
+
+                setStatus(
+                    "Stopped"
                 );
             }
-
-        },
-
-        350
-    );
+        };
 }
-
-
-/* =========================================================
-   INITIALIZE
-========================================================= */
-
-recognition =
-    createRecognition();
 
 
 /* =========================================================
    START BUTTON
-========================================================= */
+   ========================================================= */
 
 startBtn.addEventListener(
     "click",
     function() {
 
-        if (
-            !recognition
-        ) {
+        if (!recognition) {
 
             setStatus(
-                "Speech recognition unavailable."
+                "Speech recognition is unavailable."
             );
 
             return;
         }
 
 
-        if (
-            listening
-        ) {
+        if (listening) {
 
             return;
         }
 
 
         manuallyStopped = false;
-
-        restarting = false;
 
 
         clearCaption();
@@ -2113,7 +1783,7 @@ startBtn.addEventListener(
 
 /* =========================================================
    STOP BUTTON
-========================================================= */
+   ========================================================= */
 
 stopBtn.addEventListener(
     "click",
@@ -2123,15 +1793,19 @@ stopBtn.addEventListener(
 
         listening = false;
 
-        restarting = false;
-
 
         cancelSilenceTimer();
 
 
-        if (
-            recognition
-        ) {
+        interimCaption = "";
+
+
+        spellingMode = false;
+
+        waitingForSpellingWord = false;
+
+
+        if (recognition) {
 
             try {
 
@@ -2143,20 +1817,24 @@ stopBtn.addEventListener(
         }
 
 
-        startBtn.disabled = false;
+        renderCaption();
 
-        stopBtn.disabled = true;
 
         setStatus(
             "Stopped"
         );
+
+
+        startBtn.disabled = false;
+
+        stopBtn.disabled = true;
     }
 );
 
 
 /* =========================================================
    CLEAR BUTTON
-========================================================= */
+   ========================================================= */
 
 clearBtn.addEventListener(
     "click",
@@ -2175,46 +1853,41 @@ clearBtn.addEventListener(
 
 
 /* =========================================================
-   SIZE
-========================================================= */
+   FONT SIZE
+   ========================================================= */
 
 sizeSelect.addEventListener(
     "change",
     function() {
 
-        fitCaption();
+        resetFontSize();
+
+        requestAnimationFrame(
+            fitCaption
+        );
     }
 );
 
 
 /* =========================================================
    LANGUAGE
-========================================================= */
+   ========================================================= */
 
 languageSelect.addEventListener(
     "change",
     function() {
 
-        if (
-            !recognition
-        ) {
+        if (!recognition) {
 
             return;
         }
 
 
-        const wasListening =
-            listening;
+        recognition.lang =
+            languageSelect.value;
 
 
-        if (
-            wasListening
-        ) {
-
-            manuallyStopped = true;
-
-            listening = false;
-
+        if (listening) {
 
             try {
 
@@ -2224,47 +1897,13 @@ languageSelect.addEventListener(
 
             catch (error) {}
         }
-
-
-        recognition.lang =
-            languageSelect.value;
-
-
-        if (
-            wasListening
-        ) {
-
-            setTimeout(
-                function() {
-
-                    manuallyStopped = false;
-
-                    listening = false;
-
-
-                    try {
-
-                        recognition.start();
-
-                    }
-
-                    catch (error) {
-
-                        restartRecognition();
-                    }
-
-                },
-
-                500
-            );
-        }
     }
 );
 
 
 /* =========================================================
    FULL SCREEN
-========================================================= */
+   ========================================================= */
 
 fullscreenBtn.addEventListener(
     "click",
@@ -2279,9 +1918,11 @@ fullscreenBtn.addEventListener(
                 await document.documentElement
                     .requestFullscreen();
 
-            }
+                document
+                    .getElementById("controls")
+                    .style.display = "none";
 
-            else {
+            } else {
 
                 await document.exitFullscreen();
             }
@@ -2299,8 +1940,38 @@ fullscreenBtn.addEventListener(
 
 
 /* =========================================================
-   RESIZE
-========================================================= */
+   FULL SCREEN CHANGE
+   ========================================================= */
+
+document.addEventListener(
+    "fullscreenchange",
+    function() {
+
+        const controls =
+            document.getElementById(
+                "controls"
+            );
+
+
+        if (
+            document.fullscreenElement
+        ) {
+
+            controls.style.display =
+                "none";
+
+        } else {
+
+            controls.style.display =
+                "flex";
+        }
+    }
+);
+
+
+/* =========================================================
+   WINDOW RESIZE
+   ========================================================= */
 
 window.addEventListener(
     "resize",
@@ -2312,32 +1983,14 @@ window.addEventListener(
 
 
 /* =========================================================
-   INITIAL DISPLAY
-========================================================= */
+   INITIALIZE
+   ========================================================= */
 
-captionText.style.fontSize =
+caption.style.fontSize =
     sizeSelect.value + "px";
 
 
 hideCaption();
-
-
-if (
-    SpeechRecognition
-) {
-
-    setStatus(
-        "Ready"
-    );
-
-}
-
-else {
-
-    setStatus(
-        "Use Google Chrome for speech recognition."
-    );
-}
 
 </script>
 
