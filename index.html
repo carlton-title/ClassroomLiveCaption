@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Speech Recognition Captioning</title>
+<title>Centered Live Speech Transcription</title>
 
 <style>
     * {
@@ -13,86 +13,160 @@
 
     html,
     body {
+        margin: 0;
         width: 100%;
         height: 100%;
-        margin: 0;
-        padding: 0;
         overflow: hidden;
-        font-family: Arial, sans-serif;
-        background: #111;
+
+        background: #000;
+
+        font-family: Arial, Helvetica, sans-serif;
     }
 
-    /* Main screen */
+    /*
+    ============================================================
+    MAIN SCREEN
+    ============================================================
+    */
+
     #screen {
         position: fixed;
-        inset: 0;
+
+        top: 0;
+        left: 0;
+
         width: 100vw;
         height: 100vh;
-        background: #111;
+
+        overflow: hidden;
+
+        background: #000;
     }
 
-    /* Number sequence */
-    #numberDisplay {
+
+    /*
+    ============================================================
+    NUMBER SEQUENCE
+    ============================================================
+    */
+
+    #numberSequence {
         position: absolute;
-        top: 40px;
+
+        top: 30px;
         left: 50%;
+
         transform: translateX(-50%);
 
-        font-size: 32px;
-        font-weight: bold;
         color: white;
 
-        z-index: 10;
-    }
-
-    /* Caption container */
-    #captionContainer {
-        position: absolute;
-
-        /*
-         * IMPORTANT:
-         * The captions are positioned from the TOP,
-         * not from the bottom.
-         */
-        top: 180px;
-        left: 50%;
-
-        transform: translateX(-50%);
-
-        width: 85%;
-        max-width: 1100px;
-
-        text-align: center;
+        font-size: 28px;
+        font-weight: bold;
 
         z-index: 20;
     }
 
-    /* Caption text */
-    #caption {
-        display: inline-block;
 
-        padding: 18px 28px;
+    /*
+    ============================================================
+    CAPTION AREA
+    ============================================================
 
-        font-size: 42px;
-        line-height: 1.25;
-        font-weight: bold;
+    IMPORTANT:
 
-        color: white;
-        background: rgba(0, 0, 0, 0.75);
+    There is NO bottom positioning here.
 
-        border-radius: 12px;
+    The caption is centered vertically and horizontally.
+    */
 
-        min-height: 60px;
+    #captionArea {
+        position: absolute;
 
-        word-wrap: break-word;
-        overflow-wrap: break-word;
+        top: 50%;
+        left: 50%;
+
+        transform: translate(-50%, -50%);
+
+        width: 90vw;
+        max-width: 1400px;
+
+        height: auto;
+
+        display: flex;
+
+        align-items: center;
+        justify-content: center;
+
+        text-align: center;
+
+        z-index: 10;
+
+        pointer-events: none;
     }
 
-    /* Control area */
+
+    /*
+    ============================================================
+    CAPTION
+    ============================================================
+    */
+
+    #caption {
+        display: block;
+
+        width: 100%;
+
+        margin: 0 auto;
+
+        padding: 10px 20px;
+
+        color: white;
+
+        font-size: clamp(28px, 5vw, 72px);
+
+        font-weight: 600;
+
+        line-height: 1.15;
+
+        text-align: center;
+
+        overflow-wrap: break-word;
+        word-break: normal;
+
+        /*
+        Prevents the caption from becoming a huge block.
+        */
+
+        max-height: 3.5em;
+
+        overflow: hidden;
+
+        opacity: 0;
+
+        transition: opacity 0.15s ease;
+
+        /*
+        Prevents accidental browser text selection.
+        */
+
+        user-select: none;
+    }
+
+    #caption.visible {
+        opacity: 1;
+    }
+
+
+    /*
+    ============================================================
+    CONTROLS
+    ============================================================
+    */
+
     #controls {
         position: absolute;
 
-        top: 100px;
+        top: 75px;
         left: 50%;
 
         transform: translateX(-50%);
@@ -100,23 +174,26 @@
         z-index: 30;
 
         display: flex;
-        gap: 12px;
+
+        gap: 10px;
     }
 
     button {
-        padding: 12px 22px;
-
-        font-size: 18px;
-        font-weight: bold;
-
         border: none;
-        border-radius: 8px;
+
+        padding: 10px 20px;
+
+        border-radius: 6px;
+
+        font-size: 16px;
+
+        font-weight: bold;
 
         cursor: pointer;
     }
 
     #startButton {
-        background: #28a745;
+        background: #198754;
         color: white;
     }
 
@@ -125,295 +202,770 @@
         color: white;
     }
 
+
+    /*
+    ============================================================
+    STATUS
+    ============================================================
+    */
+
     #status {
         position: absolute;
 
-        top: 145px;
+        top: 125px;
         left: 50%;
 
         transform: translateX(-50%);
 
-        color: #aaa;
+        color: #888;
 
-        font-size: 16px;
+        font-size: 14px;
 
         z-index: 30;
     }
+
 </style>
 </head>
+
 
 <body>
 
 <div id="screen">
 
-    <!-- NUMBER SEQUENCE -->
-    <div id="numberDisplay">1</div>
 
-    <!-- CONTROLS -->
+    <!-- NUMBER SEQUENCE -->
+    <div id="numberSequence">1</div>
+
+
+    <!-- CONTROL BUTTONS -->
     <div id="controls">
-        <button id="startButton">Start</button>
-        <button id="stopButton">Stop</button>
+
+        <button id="startButton">
+            Start
+        </button>
+
+        <button id="stopButton">
+            Stop
+        </button>
+
     </div>
 
-    <!-- STATUS -->
-    <div id="status">Ready</div>
 
-    <!-- CAPTION -->
-    <div id="captionContainer">
+    <!-- STATUS -->
+    <div id="status">
+        Ready
+    </div>
+
+
+    <!-- CENTERED CAPTION -->
+    <div id="captionArea">
+
         <div id="caption"></div>
+
     </div>
 
 </div>
 
 
+
 <script>
 
+/*
+================================================================
+SPEECH RECOGNITION
+================================================================
+*/
+
+const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+
+const caption =
+    document.getElementById("caption");
+
+
+const numberSequence =
+    document.getElementById("numberSequence");
+
+
+const status =
+    document.getElementById("status");
+
+
+const startButton =
+    document.getElementById("startButton");
+
+
+const stopButton =
+    document.getElementById("stopButton");
+
+
+
+/*
+================================================================
+SETTINGS
+================================================================
+*/
+
+let sequenceNumber = 1;
+
+let manuallyStopped = false;
+
+let clearTimer = null;
+
+let recognitionRunning = false;
+
+
+/*
+How long a FINAL caption remains visible.
+
+2.5 seconds is the default.
+*/
+
+const CAPTION_DISPLAY_TIME = 2500;
+
+
+
+/*
+================================================================
+WORDS THAT MUST NEVER BE CONVERTED INTO NUMBERS
+================================================================
+
+This is extremely important.
+
+"anyone" must remain "anyone".
+
+The program does NOT look for the letters "one"
+inside a word.
+
+It only considers a number when it is a
+SEPARATE WORD.
+*/
+
+const protectedWords = new Set([
+
+    "anyone",
+    "someone",
+    "everyone",
+    "noone",
+    "nobody",
+    "someone",
+    "anybody",
+    "everybody",
+
+    "nothing",
+    "something",
+    "everything",
+
+    "someone's",
+    "anyone's",
+    "everyone's"
+
+]);
+
+
+
+/*
+================================================================
+NUMBER WORDS
+================================================================
+
+These are converted ONLY when they appear as
+separate words.
+
+Therefore:
+
+"one"       -> 1
+
+but:
+
+"anyone"    -> anyone
+
+because "one" is NOT a separate word.
+*/
+
+const numberWords = {
+
+    zero: "0",
+
+    one: "1",
+    two: "2",
+    three: "3",
+    four: "4",
+    five: "5",
+    six: "6",
+    seven: "7",
+    eight: "8",
+    nine: "9",
+    ten: "10",
+
+    eleven: "11",
+    twelve: "12",
+    thirteen: "13",
+    fourteen: "14",
+    fifteen: "15",
+    sixteen: "16",
+    seventeen: "17",
+    eighteen: "18",
+    nineteen: "19",
+
+    twenty: "20",
+    thirty: "30",
+    forty: "40",
+    fifty: "50",
+    sixty: "60",
+    seventy: "70",
+    eighty: "80",
+    ninety: "90",
+
+    hundred: "100",
+    thousand: "1000"
+
+};
+
+
+
+/*
+================================================================
+PROTECT WORDS FROM INCORRECT NUMBER CONVERSION
+================================================================
+*/
+
+function protectWords(text) {
+
+    return text.replace(
+        /\b[a-zA-Z]+(?:'[a-zA-Z]+)?\b/g,
+        function(word) {
+
+            const lower =
+                word.toLowerCase();
+
+            if (protectedWords.has(lower)) {
+
+                return "__PROTECTED_" +
+                    btoa(lower) +
+                    "__";
+
+            }
+
+            return word;
+        }
+    );
+
+}
+
+
+
+/*
+================================================================
+RESTORE PROTECTED WORDS
+================================================================
+*/
+
+function restoreProtectedWords(text) {
+
+    return text.replace(
+        /__PROTECTED_([^_]+)__/g,
+        function(match, encoded) {
+
+            try {
+
+                return atob(encoded);
+
+            } catch {
+
+                return match;
+
+            }
+
+        }
+    );
+
+}
+
+
+
+/*
+================================================================
+CONVERT STANDALONE NUMBER WORDS
+================================================================
+
+IMPORTANT:
+
+We use WORD BOUNDARIES.
+
+That means:
+
+"one"       -> 1
+
+"anyone"    -> anyone
+
+"someone"   -> someone
+
+"everyone"  -> everyone
+
+The letters "one" inside another word
+are never converted.
+================================================================
+*/
+
+function convertStandaloneNumbers(text) {
+
     /*
-     * ==========================================
-     * SPEECH RECOGNITION
-     * ==========================================
-     */
+    First protect words such as "anyone".
+    */
 
-    const SpeechRecognition =
-        window.SpeechRecognition ||
-        window.webkitSpeechRecognition;
-
-    const caption = document.getElementById("caption");
-    const numberDisplay = document.getElementById("numberDisplay");
-    const status = document.getElementById("status");
-
-    const startButton = document.getElementById("startButton");
-    const stopButton = document.getElementById("stopButton");
+    let result =
+        protectWords(text);
 
 
-    if (!SpeechRecognition) {
+    /*
+    Convert only complete standalone
+    number words.
+    */
 
-        status.textContent =
-            "Speech recognition is not supported in this browser.";
+    result = result.replace(
+        /\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand)\b/gi,
 
-        startButton.disabled = true;
-        stopButton.disabled = true;
+        function(match) {
 
-    } else {
+            const lower =
+                match.toLowerCase();
 
-        const recognition = new SpeechRecognition();
+            return numberWords[lower] || match;
 
-        /*
-         * Keep listening continuously.
-         */
-        recognition.continuous = true;
-
-        /*
-         * Give both temporary and final results.
-         */
-        recognition.interimResults = true;
-
-        /*
-         * English speech recognition.
-         */
-        recognition.lang = "en-US";
-
-        /*
-         * Current number in the sequence.
-         */
-        let number = 1;
-
-        /*
-         * Prevent automatic restarting
-         * after the user presses STOP.
-         */
-        let manuallyStopped = false;
+        }
+    );
 
 
-        /*
-         * ==========================================
-         * START
-         * ==========================================
-         */
+    /*
+    Restore protected words.
+    */
 
-        startButton.addEventListener("click", () => {
+    result =
+        restoreProtectedWords(result);
+
+
+    return result;
+}
+
+
+
+/*
+================================================================
+CAPTION DISPLAY
+================================================================
+*/
+
+function showCaption(text) {
+
+    if (!text || !text.trim()) {
+        return;
+    }
+
+
+    /*
+    Cancel the previous disappearing timer.
+    */
+
+    clearTimeout(clearTimer);
+
+
+    /*
+    IMPORTANT:
+
+    Replace the old caption.
+
+    We do NOT append text.
+
+    This prevents the screen from filling up.
+    */
+
+    caption.textContent = text.trim();
+
+
+    /*
+    Make caption visible.
+    */
+
+    caption.classList.add("visible");
+
+
+    /*
+    Automatically clear it.
+    */
+
+    clearTimer = setTimeout(() => {
+
+        caption.textContent = "";
+
+        caption.classList.remove("visible");
+
+    }, CAPTION_DISPLAY_TIME);
+
+}
+
+
+
+/*
+================================================================
+CLEAR CAPTION IMMEDIATELY
+================================================================
+*/
+
+function clearCaption() {
+
+    clearTimeout(clearTimer);
+
+    caption.textContent = "";
+
+    caption.classList.remove("visible");
+
+}
+
+
+
+/*
+================================================================
+SPEECH RECOGNITION
+================================================================
+*/
+
+if (!SpeechRecognition) {
+
+    status.textContent =
+        "Speech recognition is not supported in this browser.";
+
+    startButton.disabled = true;
+
+    stopButton.disabled = true;
+
+} else {
+
+
+    const recognition =
+        new SpeechRecognition();
+
+
+    /*
+    Keep listening.
+    */
+
+    recognition.continuous = true;
+
+
+    /*
+    We want both temporary and final speech.
+    */
+
+    recognition.interimResults = true;
+
+
+    /*
+    English.
+    */
+
+    recognition.lang = "en-US";
+
+
+    /*
+    ============================================================
+    START
+    ============================================================
+    */
+
+    startButton.addEventListener(
+        "click",
+        () => {
 
             manuallyStopped = false;
 
-            status.textContent = "Listening...";
+            clearCaption();
+
+            status.textContent =
+                "Listening...";
+
 
             try {
+
                 recognition.start();
+
             } catch (error) {
-                /*
-                 * Browser may throw an error if
-                 * recognition is already running.
-                 */
+
+                console.log(
+                    "Recognition already running."
+                );
+
             }
 
-        });
+        }
+    );
 
 
-        /*
-         * ==========================================
-         * STOP
-         * ==========================================
-         */
 
-        stopButton.addEventListener("click", () => {
+    /*
+    ============================================================
+    STOP
+    ============================================================
+    */
+
+    stopButton.addEventListener(
+        "click",
+        () => {
 
             manuallyStopped = true;
 
             recognition.stop();
 
-            status.textContent = "Stopped";
+            clearCaption();
 
-        });
+            status.textContent =
+                "Stopped";
 
-
-        /*
-         * ==========================================
-         * SPEECH RESULTS
-         * ==========================================
-         */
-
-        recognition.onresult = (event) => {
-
-            let finalText = "";
-            let interimText = "";
+        }
+    );
 
 
-            for (
-                let i = event.resultIndex;
-                i < event.results.length;
-                i++
-            ) {
 
-                const transcript =
-                    event.results[i][0].transcript;
+    /*
+    ============================================================
+    SPEECH RESULTS
+    ============================================================
+    */
 
-
-                if (event.results[i].isFinal) {
-
-                    finalText += transcript;
-
-                } else {
-
-                    interimText += transcript;
-
-                }
-
-            }
+    recognition.onresult = function(event) {
 
 
-            /*
-             * Show the speech exactly as
-             * recognized by the browser.
-             *
-             * Nothing is removed.
-             */
-            if (interimText) {
-
-                caption.textContent =
-                    interimText;
-
-            }
-
-
-            /*
-             * When the browser considers
-             * the speech final...
-             */
-            if (finalText) {
-
-                caption.textContent =
-                    finalText;
-
-
-                /*
-                 * Increase the number sequence.
-                 */
-                numberDisplay.textContent =
-                    number;
-
-                number++;
-
-
-                /*
-                 * Reset the number if desired.
-                 *
-                 * Remove this section if you
-                 * want unlimited numbers.
-                 */
-                if (number > 9999) {
-                    number = 1;
-                }
-
-            }
-
-        };
+        let currentText = "";
 
 
         /*
-         * ==========================================
-         * RECOGNITION ENDS
-         * ==========================================
-         */
+        Collect the current recognition result.
 
-        recognition.onend = () => {
+        We do NOT accumulate every previous
+        sentence.
+        */
 
-            /*
-             * Chrome sometimes automatically
-             * stops speech recognition.
-             *
-             * Restart it unless the user
-             * deliberately pressed STOP.
-             */
-            if (!manuallyStopped) {
+        for (
+            let i = event.resultIndex;
+            i < event.results.length;
+            i++
+        ) {
 
-                status.textContent =
-                    "Listening...";
+            currentText +=
+                event.results[i][0].transcript;
 
-                try {
-                    recognition.start();
-                } catch (error) {
-                    // Already running.
-                }
+        }
 
-            }
 
-        };
+        if (!currentText.trim()) {
+            return;
+        }
 
 
         /*
-         * ==========================================
-         * ERRORS
-         * ==========================================
-         */
+        ========================================================
+        IMPORTANT NUMBER PROCESSING
+        ========================================================
 
-        recognition.onerror = (event) => {
+        The browser's original speech recognition
+        remains the source text.
 
-            console.log(
-                "Speech recognition error:",
-                event.error
+        We only convert standalone number words.
+
+        Example:
+
+        "anyone can do it"
+
+        stays:
+
+        "anyone can do it"
+
+        NOT:
+
+        "any 1 can do it"
+        */
+
+        const processedText =
+            convertStandaloneNumbers(
+                currentText
             );
 
 
-            if (event.error === "not-allowed") {
+        /*
+        Show the current speech.
 
-                status.textContent =
-                    "Microphone permission denied.";
+        Old text is replaced.
+        */
 
-            } else if (event.error === "no-speech") {
+        showCaption(processedText);
 
-                status.textContent =
-                    "Listening...";
 
-            } else {
+        /*
+        ========================================================
+        FINAL RESULT
+        ========================================================
+        */
 
-                status.textContent =
-                    "Error: " + event.error;
+        const lastResult =
+            event.results[
+                event.results.length - 1
+            ];
 
-            }
 
-        };
+        if (
+            lastResult &&
+            lastResult.isFinal
+        ) {
 
-    }
+            /*
+            Update the sequence.
+            */
+
+            numberSequence.textContent =
+                sequenceNumber;
+
+            sequenceNumber++;
+
+
+            /*
+            The final caption remains visible
+            for approximately 2.5 seconds,
+            then disappears automatically.
+            */
+
+            clearTimeout(clearTimer);
+
+            clearTimer = setTimeout(() => {
+
+                clearCaption();
+
+            }, CAPTION_DISPLAY_TIME);
+
+        }
+
+    };
+
+
+
+    /*
+    ============================================================
+    NEW SPEECH STARTS
+    ============================================================
+    */
+
+    recognition.onspeechstart = function() {
+
+        /*
+        Immediately clear the previous
+        finished caption when new speech begins.
+
+        This prevents old sentences from
+        remaining on screen.
+        */
+
+        clearCaption();
+
+        status.textContent =
+            "Listening...";
+
+    };
+
+
+
+    /*
+    ============================================================
+    RECOGNITION ENDS
+    ============================================================
+    */
+
+    recognition.onend = function() {
+
+        recognitionRunning = false;
+
+
+        /*
+        Chrome can stop recognition by itself.
+
+        Restart unless the user pressed STOP.
+        */
+
+        if (!manuallyStopped) {
+
+            status.textContent =
+                "Listening...";
+
+
+            setTimeout(() => {
+
+                try {
+
+                    recognition.start();
+
+                    recognitionRunning = true;
+
+                } catch (error) {
+
+                    console.log(
+                        "Unable to restart recognition."
+                    );
+
+                }
+
+            }, 100);
+
+        }
+
+    };
+
+
+
+    /*
+    ============================================================
+    ERRORS
+    ============================================================
+    */
+
+    recognition.onerror = function(event) {
+
+        console.log(
+            "Speech recognition error:",
+            event.error
+        );
+
+
+        if (
+            event.error ===
+            "not-allowed"
+        ) {
+
+            status.textContent =
+                "Microphone permission denied.";
+
+        }
+
+        else if (
+            event.error ===
+            "no-speech"
+        ) {
+
+            status.textContent =
+                "Listening...";
+
+        }
+
+        else {
+
+            status.textContent =
+                "Error: " +
+                event.error;
+
+        }
+
+    };
+
+}
 
 </script>
 
