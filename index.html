@@ -1,153 +1,306 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Automatic Live Transcription</title>
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>Classroom Live Transcription</title>
+
 
 <style>
+
+/* ============================================================
+   BASIC SCREEN
+   ============================================================ */
+
+html,
+body {
+
+    margin: 0;
+    padding: 0;
+
+    width: 100%;
+    height: 100%;
+
+    overflow: hidden;
+
+    background: #000;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+}
+
+
+/* ============================================================
+   CAPTION
+   ============================================================ */
+
+#caption {
+
+    position: fixed;
+
+    top: 50%;
+    left: 50%;
+
+    transform:
+        translate(-50%, -50%);
+
+    width: 90vw;
+
+    max-width: 1500px;
+
+    max-height: 3.6em;
+
+    overflow: hidden;
+
+    text-align: center;
+
+    color: white;
+
     /*
-    ============================================================
-    COMPLETELY BLACK SCREEN
-    ============================================================
+       DEFAULT CLASSROOM SIZE
+
+       Earlier version:
+       maximum 72px
+
+       New default:
+       96px
     */
 
-    html,
-    body {
-        margin: 0;
-        padding: 0;
+    font-size: 96px;
 
-        width: 100%;
-        height: 100%;
+    font-weight: 600;
 
-        overflow: hidden;
+    line-height: 1.12;
 
-        background: #000;
+    overflow-wrap: break-word;
 
-        font-family:
-            Arial,
-            Helvetica,
-            sans-serif;
-    }
+    word-break: normal;
 
+    opacity: 0;
 
-    /*
-    ============================================================
-    ONLY VISIBLE ELEMENT: CAPTION
-    ============================================================
-    */
+    transition:
+        opacity 0.12s ease;
 
-    #caption {
+    pointer-events: none;
 
-        position: fixed;
-
-        /*
-        EXACT CENTER OF THE SCREEN
-        */
-
-        top: 50%;
-        left: 50%;
-
-        transform:
-            translate(-50%, -50%);
-
-        width: 88vw;
-
-        max-width: 1400px;
-
-        /*
-        Keep the caption compact.
-        */
-
-        max-height: 3.6em;
-
-        overflow: hidden;
-
-        text-align: center;
-
-        color: white;
-
-        /*
-        Automatically scales according
-        to screen size.
-        */
-
-        font-size:
-            clamp(28px, 5vw, 72px);
-
-        font-weight: 600;
-
-        line-height: 1.18;
-
-        overflow-wrap: break-word;
-
-        word-break: normal;
-
-        opacity: 0;
-
-        transition:
-            opacity 0.12s ease;
-
-        /*
-        Absolutely nothing can be clicked.
-        */
-
-        pointer-events: none;
-
-        user-select: none;
-    }
+    user-select: none;
+}
 
 
-    #caption.visible {
-        opacity: 1;
-    }
+#caption.visible {
+
+    opacity: 1;
+}
+
+
+/* ============================================================
+   TEACHER MENU
+   ============================================================ */
+
+#teacherMenu {
+
+    position: fixed;
+
+    top: 0;
+    left: 0;
+
+    width: 100%;
+
+    height: 52px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 12px;
+
+    background:
+        rgba(25, 25, 25, 0.96);
+
+    z-index: 1000;
+
+    transition:
+        opacity 0.2s ease;
+}
+
+
+#teacherMenu label {
+
+    color: white;
+
+    font-size: 14px;
+
+    font-weight: 600;
+}
+
+
+#teacherMenu select,
+#teacherMenu button {
+
+    height: 32px;
+
+    border: 1px solid #666;
+
+    border-radius: 5px;
+
+    background: #222;
+
+    color: white;
+
+    padding: 0 10px;
+
+    font-size: 14px;
+
+    cursor: pointer;
+}
+
+
+#teacherMenu button:hover,
+#teacherMenu select:hover {
+
+    background: #333;
+}
+
+
+/* ============================================================
+   FULLSCREEN
+
+   When the page enters fullscreen, the entire menu disappears.
+   ============================================================ */
+
+:fullscreen #teacherMenu {
+
+    display: none;
+}
+
+
+:-webkit-full-screen #teacherMenu {
+
+    display: none;
+}
+
+
+/* ============================================================
+   TRANSLATION STATUS
+
+   This is NOT displayed on the student screen.
+
+   It is only logged internally.
+   ============================================================ */
+
 </style>
+
 </head>
 
 
 <body>
 
-<!--
-============================================================
-THERE IS ONLY ONE ELEMENT ON THE SCREEN.
-NO BUTTONS.
-NO TIMER.
-NO NUMBER.
-NO STATUS.
-============================================================
--->
+
+<!-- ============================================================
+     TEACHER MENU
+     ============================================================ -->
+
+<div id="teacherMenu">
+
+    <label for="fontSize">
+        Font
+    </label>
+
+    <select id="fontSize">
+
+        <option value="48">
+            48 px
+        </option>
+
+        <option value="64">
+            64 px
+        </option>
+
+        <option value="80">
+            80 px
+        </option>
+
+        <option value="96" selected>
+            96 px
+        </option>
+
+        <option value="120">
+            120 px
+        </option>
+
+        <option value="144">
+            144 px
+        </option>
+
+    </select>
+
+
+    <label for="language">
+        Language
+    </label>
+
+    <select id="language">
+
+        <option value="en" selected>
+            English
+        </option>
+
+        <option value="th">
+            Thai
+        </option>
+
+    </select>
+
+
+    <button id="fullscreenButton">
+        Fullscreen
+    </button>
+
+</div>
+
+
+
+<!-- ============================================================
+     ONLY STUDENT-VISIBLE ELEMENT
+     ============================================================ -->
 
 <div id="caption"></div>
 
 
+
 <script>
 
-/*
-================================================================
-AUTOMATIC SPEECH RECOGNITION
-================================================================
-*/
-
-const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
+/* ============================================================
+   ELEMENTS
+   ============================================================ */
 
 const caption =
     document.getElementById("caption");
 
+const fontSize =
+    document.getElementById("fontSize");
 
-/*
-================================================================
-SETTINGS
-================================================================
-*/
+const language =
+    document.getElementById("language");
 
-/*
-The caption disappears after TWO SECONDS.
+const fullscreenButton =
+    document.getElementById("fullscreenButton");
 
-This is deliberately short.
-*/
+
+/* ============================================================
+   SETTINGS
+   ============================================================ */
 
 const CLEAR_DELAY = 2000;
 
@@ -157,14 +310,142 @@ let recognition = null;
 
 let restarting = false;
 
+let currentLanguage = "en";
 
-/*
-================================================================
-WORDS THAT MUST ALWAYS REMAIN WORDS
-================================================================
-*/
+let lastFinalEnglish = "";
 
-const neverNumeric = new Set([
+
+/* ============================================================
+   FONT SIZE
+   ============================================================ */
+
+fontSize.addEventListener(
+    "change",
+    function () {
+
+        caption.style.fontSize =
+            fontSize.value + "px";
+
+    }
+);
+
+
+/* ============================================================
+   LANGUAGE
+   ============================================================ */
+
+language.addEventListener(
+    "change",
+    function () {
+
+        currentLanguage =
+            language.value;
+
+        /*
+        Clear old caption when language changes.
+        */
+
+        clearCaption();
+
+    }
+);
+
+
+/* ============================================================
+   FULLSCREEN
+   ============================================================ */
+
+fullscreenButton.addEventListener(
+    "click",
+    async function () {
+
+        try {
+
+            if (!document.fullscreenElement) {
+
+                await document.documentElement.requestFullscreen();
+
+            }
+
+            else {
+
+                await document.exitFullscreen();
+
+            }
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Fullscreen error:",
+                error
+            );
+
+        }
+
+    }
+);
+
+
+/* ============================================================
+   CAPTION DISPLAY
+   ============================================================ */
+
+function showCaption(text) {
+
+    if (!text || !text.trim()) {
+
+        return;
+    }
+
+
+    clearTimeout(clearTimer);
+
+
+    caption.textContent =
+        text.trim();
+
+
+    caption.classList.add(
+        "visible"
+    );
+}
+
+
+/* ============================================================
+   CLEAR CAPTION
+   ============================================================ */
+
+function clearCaption() {
+
+    clearTimeout(clearTimer);
+
+    caption.textContent = "";
+
+    caption.classList.remove(
+        "visible"
+    );
+}
+
+
+/* ============================================================
+   PROTECTED WORDS
+
+   These MUST remain words.
+
+   "anyone"
+   "someone"
+   "everyone"
+
+   must never become:
+
+   "any 1"
+   "some 1"
+   "every 1"
+   ============================================================ */
+
+const protectedWords = new Set([
 
     "anyone",
     "someone",
@@ -175,17 +456,13 @@ const neverNumeric = new Set([
     "everybody",
 
     "nobody",
-    "nothing",
 
+    "nothing",
     "something",
     "everything",
 
-    "someone's",
-    "anyone's",
-    "everyone's",
-
-    "somewhere",
     "anywhere",
+    "somewhere",
     "everywhere",
 
     "sometimes"
@@ -193,207 +470,97 @@ const neverNumeric = new Set([
 ]);
 
 
-/*
-================================================================
-NUMBER WORDS
-================================================================
-*/
+/* ============================================================
+   PROTECT SPECIAL WORDS
+   ============================================================ */
 
-const numberWords = {
+function protectSpecialWords(text) {
 
-    zero: "zero",
-    one: "one",
-    two: "two",
-    three: "three",
-    four: "four",
-    five: "five",
-    six: "six",
-    seven: "seven",
-    eight: "eight",
-    nine: "nine",
+    const saved = [];
 
-    ten: "ten",
-    eleven: "eleven",
-    twelve: "twelve",
-    thirteen: "thirteen",
-    fourteen: "fourteen",
-    fifteen: "fifteen",
-    sixteen: "sixteen",
-    seventeen: "seventeen",
-    eighteen: "eighteen",
-    nineteen: "nineteen",
-
-    twenty: "twenty",
-    thirty: "thirty",
-    forty: "forty",
-    fifty: "fifty",
-    sixty: "sixty",
-    seventy: "seventy",
-    eighty: "eighty",
-    ninety: "ninety",
-
-    hundred: "hundred",
-    thousand: "thousand",
-    million: "million",
-    billion: "billion"
-};
-
-
-/*
-================================================================
-ORDINARY DIGITS → WORDS
-================================================================
-
-This prevents ordinary numeric transcription such as:
-
-"I have 5 books"
-
-from appearing as:
-
-"I have 5 books"
-
-Instead:
-
-"I have five books"
-
-However, years and money are protected.
-================================================================
-*/
-
-function digitsToWords(text) {
-
-    /*
-    Protect money.
-
-    Examples:
-
-    $25
-    $1,500
-    25 dollars
-    100 baht
-
-    These remain numeric.
-    */
-
-    const protectedMoney = [];
 
     text = text.replace(
-        /(?:[$€£¥]\s?\d[\d,]*(?:\.\d+)?|\b\d[\d,]*(?:\.\d+)?\s?(?:dollars?|baht|euros?|pounds?|yen))/gi,
+        /\b[a-zA-Z]+(?:'[a-zA-Z]+)?\b/g,
 
-        function(match) {
+        function(word) {
 
-            const token =
-                `__MONEY_${protectedMoney.length}__`;
+            const lower =
+                word.toLowerCase();
 
-            protectedMoney.push(match);
 
-            return token;
+            if (
+                protectedWords.has(
+                    lower
+                )
+            ) {
+
+                const token =
+                    `___SPECIAL_${saved.length}___`;
+
+                saved.push(word);
+
+                return token;
+            }
+
+
+            return word;
         }
     );
 
 
-    /*
-    Protect years.
-
-    Four-digit years such as:
-
-    1990
-    2026
-    1985
-
-    remain numeric.
-    */
-
-    const protectedYears = [];
-
-    text = text.replace(
-        /\b(?:1[0-9]{3}|20[0-9]{2}|21[0-9]{2})\b/g,
-
-        function(match) {
-
-            const token =
-                `__YEAR_${protectedYears.length}__`;
-
-            protectedYears.push(match);
-
-            return token;
-        }
-    );
-
-
-    /*
-    Convert ordinary standalone digits
-    into English words.
-    */
-
-    text = text.replace(
-        /\b\d+\b/g,
-
-        function(number) {
-
-            return integerToWords(
-                parseInt(number, 10)
-            );
-        }
-    );
-
-
-    /*
-    Restore years.
-    */
-
-    text = text.replace(
-        /__YEAR_(\d+)__/g,
-
-        function(match, index) {
-
-            return protectedYears[
-                parseInt(index, 10)
-            ];
-        }
-    );
-
-
-    /*
-    Restore money.
-    */
-
-    text = text.replace(
-        /__MONEY_(\d+)__/g,
-
-        function(match, index) {
-
-            return protectedMoney[
-                parseInt(index, 10)
-            ];
-        }
-    );
-
-
-    return text;
+    return {
+        text,
+        saved
+    };
 }
 
 
-/*
-================================================================
-INTEGER → ENGLISH WORDS
-================================================================
-*/
+/* ============================================================
+   RESTORE SPECIAL WORDS
+   ============================================================ */
 
-function integerToWords(number) {
+function restoreSpecialWords(
+    text,
+    saved
+) {
 
-    if (!Number.isFinite(number)) {
-        return "";
-    }
+    return text.replace(
+        /___SPECIAL_(\d+)___/g,
 
-    if (number === 0) {
-        return "zero";
-    }
+        function(match, index) {
 
+            return saved[
+                parseInt(index, 10)
+            ];
+
+        }
+    );
+}
+
+
+/* ============================================================
+   CONVERT ORDINARY DIGITS TO WORDS
+
+   Examples:
+
+   5      -> five
+   12     -> twelve
+   25     -> twenty-five
+
+   BUT:
+
+   2026   -> 2026
+   $25    -> $25
+   25 baht -> 25 baht
+
+   Spoken "one", "two", "three" remain words.
+   ============================================================ */
+
+function numberToWords(number) {
 
     const ones = [
 
-        "",
+        "zero",
         "one",
         "two",
         "three",
@@ -433,221 +600,233 @@ function integerToWords(number) {
     ];
 
 
-    function under1000(n) {
+    if (number < 20) {
 
-        let result = "";
+        return ones[number];
 
-
-        if (n >= 100) {
-
-            result +=
-                ones[Math.floor(n / 100)] +
-                " hundred";
-
-            n %= 100;
-
-            if (n > 0) {
-                result += " ";
-            }
-        }
-
-
-        if (n >= 20) {
-
-            result +=
-                tens[Math.floor(n / 10)];
-
-            n %= 10;
-
-            if (n > 0) {
-
-                result +=
-                    "-" + ones[n];
-            }
-
-        }
-
-        else if (n > 0) {
-
-            result += ones[n];
-        }
-
-
-        return result;
     }
 
 
-    let result = "";
+    if (number < 100) {
 
+        return tens[
+            Math.floor(number / 10)
+        ] +
 
-    if (number >= 1000000000) {
+        (
+            number % 10
+                ? "-" +
+                  ones[number % 10]
+                : ""
+        );
 
-        result +=
-            under1000(
-                Math.floor(number / 1000000000)
-            ) +
-            " billion";
-
-        number %= 1000000000;
-
-        if (number > 0) {
-            result += " ";
-        }
     }
 
 
-    if (number >= 1000000) {
+    if (number < 1000) {
 
-        result +=
-            under1000(
-                Math.floor(number / 1000000)
-            ) +
-            " million";
+        return (
 
-        number %= 1000000;
+            ones[
+                Math.floor(number / 100)
+            ]
 
-        if (number > 0) {
-            result += " ";
-        }
+            +
+
+            " hundred"
+
+            +
+
+            (
+                number % 100
+                    ? " " +
+                      numberToWords(
+                          number % 100
+                      )
+                    : ""
+            )
+
+        );
+
     }
 
 
-    if (number >= 1000) {
+    if (number < 1000000) {
 
-        result +=
-            under1000(
-                Math.floor(number / 1000)
-            ) +
-            " thousand";
+        return (
 
-        number %= 1000;
+            numberToWords(
+                Math.floor(
+                    number / 1000
+                )
+            )
 
-        if (number > 0) {
-            result += " ";
-        }
+            +
+
+            " thousand"
+
+            +
+
+            (
+                number % 1000
+                    ? " " +
+                      numberToWords(
+                          number % 1000
+                      )
+                    : ""
+            )
+
+        );
+
     }
 
 
-    if (number > 0) {
-
-        result +=
-            under1000(number);
-    }
-
-
-    return result;
+    return String(number);
 }
 
 
-/*
-================================================================
-PROTECT WORDS SUCH AS:
+/* ============================================================
+   FORMAT NUMBERS
+   ============================================================ */
 
-anyone
-someone
-everyone
-================================================================
-*/
-
-function protectSpecialWords(text) {
-
-    const protectedWords = [];
-
-    text = text.replace(
-        /\b[a-zA-Z]+(?:'[a-zA-Z]+)?\b/g,
-
-        function(word) {
-
-            const lower =
-                word.toLowerCase();
-
-            if (neverNumeric.has(lower)) {
-
-                const token =
-                    `__WORD_${protectedWords.length}__`;
-
-                protectedWords.push(word);
-
-                return token;
-            }
-
-            return word;
-        }
-    );
-
-
-    return {
-        text,
-        protectedWords
-    };
-}
-
-
-/*
-================================================================
-RESTORE SPECIAL WORDS
-================================================================
-*/
-
-function restoreSpecialWords(
-    text,
-    protectedWords
-) {
-
-    return text.replace(
-        /__WORD_(\d+)__/g,
-
-        function(match, index) {
-
-            return protectedWords[
-                parseInt(index, 10)
-            ];
-        }
-    );
-}
-
-
-/*
-================================================================
-FINAL TEXT PROCESSING
-================================================================
-*/
-
-function processTranscript(text) {
-
-    /*
-    Protect words such as "anyone".
-    */
+function formatNumbers(text) {
 
     const protectedResult =
         protectSpecialWords(text);
 
 
+    let result =
+        protectedResult.text;
+
+
     /*
-    Convert only actual numeric digits.
-
-    Spoken words such as "one", "two",
-    "three" remain WORDS.
-
-    This is intentional.
-
-    Therefore:
-
-    "I have two books"
-
-    stays:
-
-    "I have two books"
-
-    instead of:
-
-    "I have 2 books"
+    Protect money.
     */
 
-    let result =
-        digitsToWords(
-            protectedResult.text
-        );
+    const money = [];
+
+
+    result = result.replace(
+
+        /(?:[$€£¥]\s?\d[\d,]*(?:\.\d+)?|\b\d[\d,]*(?:\.\d+)?\s?(?:dollars?|baht|euros?|pounds?|yen))/gi,
+
+        function(match) {
+
+            const token =
+                `___MONEY_${money.length}___`;
+
+            money.push(match);
+
+            return token;
+
+        }
+
+    );
+
+
+    /*
+    Protect years.
+    */
+
+    const years = [];
+
+
+    result = result.replace(
+
+        /\b(?:1[0-9]{3}|20[0-9]{2}|21[0-9]{2})\b/g,
+
+        function(match) {
+
+            const token =
+                `___YEAR_${years.length}___`;
+
+            years.push(match);
+
+            return token;
+
+        }
+
+    );
+
+
+    /*
+    Convert ordinary digits.
+    */
+
+    result = result.replace(
+
+        /\b\d+\b/g,
+
+        function(match) {
+
+            const number =
+                parseInt(
+                    match,
+                    10
+                );
+
+
+            /*
+            Avoid absurdly large conversions.
+            */
+
+            if (
+                !Number.isSafeInteger(
+                    number
+                ) ||
+                number > 999999
+            ) {
+
+                return match;
+
+            }
+
+
+            return numberToWords(
+                number
+            );
+
+        }
+
+    );
+
+
+    /*
+    Restore years.
+    */
+
+    result = result.replace(
+
+        /___YEAR_(\d+)___/g,
+
+        function(match, index) {
+
+            return years[
+                parseInt(index, 10)
+            ];
+
+        }
+
+    );
+
+
+    /*
+    Restore money.
+    */
+
+    result = result.replace(
+
+        /___MONEY_(\d+)___/g,
+
+        function(match, index) {
+
+            return money[
+                parseInt(index, 10)
+            ];
+
+        }
+
+    );
 
 
     /*
@@ -657,7 +836,7 @@ function processTranscript(text) {
     result =
         restoreSpecialWords(
             result,
-            protectedResult.protectedWords
+            protectedResult.saved
         );
 
 
@@ -665,312 +844,508 @@ function processTranscript(text) {
 }
 
 
-/*
-================================================================
-PUNCTUATION
-================================================================
+/* ============================================================
+   PUNCTUATION CLEANUP
 
-The browser supplies punctuation when supported.
+   We preserve punctuation supplied by speech recognition.
 
-We preserve it.
-
-We do NOT strip:
-
-?
-!
-.
-,
-:
-;
-================================================================
-*/
+   We do NOT remove question marks or exclamation marks.
+   ============================================================ */
 
 function cleanPunctuation(text) {
 
     return text
-        .replace(/\s+([,.!?;:])/g, "$1")
-        .replace(/\s+/g, " ")
+
+        .replace(
+            /\s+([,.!?;:])/g,
+            "$1"
+        )
+
+        .replace(
+            /\s+/g,
+            " "
+        )
+
         .trim();
 }
 
 
-/*
-================================================================
-DISPLAY CAPTION
-================================================================
-*/
+/* ============================================================
+   ENGLISH CAPTION
+   ============================================================ */
 
-function displayCaption(text) {
+function displayEnglish(text) {
 
-    if (!text || !text.trim()) {
-        return;
-    }
+    const processed =
+        formatNumbers(text);
 
 
-    clearTimeout(clearTimer);
-
-
-    let finalText =
-        processTranscript(text);
-
-
-    finalText =
-        cleanPunctuation(finalText);
-
-
-    if (!finalText) {
-        return;
-    }
-
-
-    /*
-    REPLACE the caption.
-
-    Never append old text.
-    */
-
-    caption.textContent =
-        finalText;
-
-
-    caption.classList.add("visible");
-
-
-    /*
-    Automatically disappear after
-    TWO SECONDS.
-    */
-
-    clearTimer =
-        setTimeout(
-            function() {
-
-                caption.textContent = "";
-
-                caption.classList.remove(
-                    "visible"
-                );
-
-            },
-            CLEAR_DELAY
+    const cleaned =
+        cleanPunctuation(
+            processed
         );
+
+
+    if (!cleaned) {
+        return;
+    }
+
+
+    showCaption(cleaned);
 }
 
 
-/*
-================================================================
-CLEAR CAPTION
-================================================================
-*/
+/* ============================================================
+   TRANSLATE ENGLISH → THAI
 
-function clearCaption() {
+   The browser sends the completed English sentence
+   to YOUR server.
 
-    clearTimeout(clearTimer);
+   The server then communicates with Google Cloud Translation.
 
-    caption.textContent = "";
+   The Google credential never appears in this HTML file.
+   ============================================================ */
 
-    caption.classList.remove(
-        "visible"
-    );
-}
+async function translateToThai(text) {
 
+    try {
 
-/*
-================================================================
-CREATE RECOGNITION
-================================================================
-*/
+        const response =
+            await fetch(
+                "/translate",
+                {
 
-function createRecognition() {
+                    method: "POST",
 
-    if (!SpeechRecognition) {
+                    headers: {
 
-        console.error(
-            "Speech recognition is not supported by this browser."
-        );
+                        "Content-Type":
+                            "application/json"
 
-        return;
-    }
+                    },
 
+                    body: JSON.stringify({
 
-    recognition =
-        new SpeechRecognition();
+                        text: text,
 
+                        source: "en",
 
-    /*
-    ============================================================
-    AUTOMATIC CONTINUOUS LISTENING
-    ============================================================
-    */
+                        target: "th"
 
-    recognition.continuous = true;
+                    })
 
-
-    /*
-    We want live speech while the person
-    is speaking.
-    */
-
-    recognition.interimResults = true;
-
-
-    /*
-    English speech.
-    */
-
-    recognition.lang = "en-US";
-
-
-    /*
-    ============================================================
-    SPEECH RESULTS
-    ============================================================
-    */
-
-    recognition.onresult =
-        function(event) {
-
-            let transcript = "";
-
-
-            /*
-            Only process the current recognition
-            results.
-
-            Do NOT build a giant transcript.
-            */
-
-            for (
-                let i = event.resultIndex;
-                i < event.results.length;
-                i++
-            ) {
-
-                transcript +=
-                    event.results[i][0].transcript;
-            }
-
-
-            if (!transcript.trim()) {
-                return;
-            }
-
-
-            /*
-            Display current speech.
-            */
-
-            displayCaption(
-                transcript
+                }
             );
 
 
-            /*
-            Determine whether this is
-            a completed sentence.
-            */
+        if (!response.ok) {
 
-            const lastResult =
-                event.results[
-                    event.results.length - 1
-                ];
+            throw new Error(
+                "Translation request failed."
+            );
+
+        }
 
 
-            if (
-                lastResult &&
-                lastResult.isFinal
-            ) {
+        const data =
+            await response.json();
+
+
+        if (
+            !data.translation
+        ) {
+
+            throw new Error(
+                "No translation returned."
+            );
+
+        }
+
+
+        return data.translation;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Translation error:",
+            error
+        );
+
+
+        return null;
+    }
+}
+
+
+/* ============================================================
+   SPEECH RECOGNITION
+   ============================================================ */
+
+const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+
+if (!SpeechRecognition) {
+
+    console.error(
+        "Speech Recognition is not supported in this browser."
+    );
+
+}
+
+else {
+
+
+    function startRecognition() {
+
+        recognition =
+            new SpeechRecognition();
+
+
+        /*
+        Continuous listening.
+        */
+
+        recognition.continuous =
+            true;
+
+
+        /*
+        We want live text while speaking.
+        */
+
+        recognition.interimResults =
+            true;
+
+
+        recognition.maxAlternatives =
+            1;
+
+
+        recognition.lang =
+            "en-US";
+
+
+        /*
+        ========================================================
+        SPEECH RESULT
+        ========================================================
+        */
+
+        recognition.onresult =
+            async function(event) {
+
+                let interimText = "";
+
+                let finalText = "";
+
+
+                for (
+                    let i = event.resultIndex;
+                    i < event.results.length;
+                    i++
+                ) {
+
+                    const result =
+                        event.results[i];
+
+
+                    const transcript =
+                        result[0].transcript;
+
+
+                    if (
+                        result.isFinal
+                    ) {
+
+                        finalText +=
+                            transcript;
+
+                    }
+
+                    else {
+
+                        interimText +=
+                            transcript;
+
+                    }
+
+                }
+
+
+                /*
+                =================================================
+                INTERIM SPEECH
+                =================================================
+
+                Show English immediately.
+
+                This keeps the caption feeling live.
+                */
+
+                if (
+                    interimText.trim() &&
+                    currentLanguage === "en"
+                ) {
+
+                    displayEnglish(
+                        interimText
+                    );
+
+                }
+
+
+                /*
+                =================================================
+                FINAL SPEECH
+                =================================================
+                */
+
+                if (
+                    finalText.trim()
+                ) {
+
+                    lastFinalEnglish =
+                        finalText.trim();
+
+
+                    /*
+                    English mode.
+                    */
+
+                    if (
+                        currentLanguage === "en"
+                    ) {
+
+                        displayEnglish(
+                            finalText
+                        );
+
+                    }
+
+
+                    /*
+                    Thai mode.
+                    */
+
+                    else if (
+                        currentLanguage === "th"
+                    ) {
+
+                        /*
+                        Temporarily show the English
+                        recognition while translation
+                        is being requested.
+                        */
+
+                        displayEnglish(
+                            finalText
+                        );
+
+
+                        const thai =
+                            await translateToThai(
+                                formatNumbers(
+                                    finalText
+                                )
+                            );
+
+
+                        /*
+                        Make sure the user has not
+                        switched back to English while
+                        translation was happening.
+                        */
+
+                        if (
+                            thai &&
+                            currentLanguage === "th"
+                        ) {
+
+                            showCaption(
+                                thai
+                            );
+
+                        }
+
+                    }
+
+
+                    /*
+                    =================================================
+                    TWO-SECOND DISAPPEAR TIMER
+                    =================================================
+
+                    If no new speech arrives,
+                    the caption disappears.
+                    */
+
+                    clearTimeout(
+                        clearTimer
+                    );
+
+
+                    clearTimer =
+                        setTimeout(
+                            function() {
+
+                                clearCaption();
+
+                            },
+                            CLEAR_DELAY
+                        );
+
+                }
+
+            };
+
+
+        /*
+        ========================================================
+        SPEECH START
+        ========================================================
+        */
+
+        recognition.onspeechstart =
+            function() {
+
+                /*
+                Immediately clear the old caption
+                when a new person starts speaking.
+                */
+
+                clearCaption();
+
+            };
+
+
+        /*
+        ========================================================
+        SPEECH END
+        ========================================================
+        */
+
+        recognition.onspeechend =
+            function() {
+
+                /*
+                Start the two-second disappearance timer
+                as soon as actual speech ends.
+                */
 
                 clearTimeout(
                     clearTimer
                 );
 
 
-                /*
-                Final text disappears
-                after exactly two seconds.
-                */
-
                 clearTimer =
                     setTimeout(
-                        clearCaption,
+                        function() {
+
+                            clearCaption();
+
+                        },
                         CLEAR_DELAY
                     );
-            }
-        };
+
+            };
 
 
-    /*
-    ============================================================
-    NEW SPEECH
-    ============================================================
+        /*
+        ========================================================
+        RECOGNITION ENDS
+        ========================================================
+        */
 
-    As soon as somebody starts talking again,
-    the previous caption is cleared.
-    */
+        recognition.onend =
+            function() {
 
-    recognition.onspeechstart =
-        function() {
+                /*
+                Chrome can end a recognition session
+                even though we still want to listen.
 
-            clearCaption();
-        };
+                Restart automatically.
+                */
 
+                if (
+                    !restarting
+                ) {
 
-    /*
-    ============================================================
-    RECOGNITION ENDED
-    ============================================================
-
-    Chrome sometimes stops recognition
-    automatically.
-
-    Restart it automatically.
-
-    There is NO button.
-    */
-
-    recognition.onend =
-        function() {
-
-            setTimeout(
-                function() {
-
-                    try {
-
-                        recognition.start();
-
-                    }
-
-                    catch (error) {
-
-                        /*
-                        Ignore "already started"
-                        errors.
-                        */
-
-                    }
-
-                },
-                100
-            );
-        };
+                    restarting =
+                        true;
 
 
-    /*
-    ============================================================
-    ERROR
-    ============================================================
-    */
+                    setTimeout(
+                        function() {
 
-    recognition.onerror =
-        function(event) {
+                            restarting =
+                                false;
+
+
+                            try {
+
+                                startRecognition();
+
+                            }
+
+                            catch (error) {
+
+                                console.error(
+                                    error
+                                );
+
+                            }
+
+                        },
+                        100
+                    );
+
+                }
+
+            };
+
+
+        /*
+        ========================================================
+        ERROR
+        ========================================================
+        */
+
+        recognition.onerror =
+            function(event) {
+
+                console.log(
+                    "Speech recognition:",
+                    event.error
+                );
+
+            };
+
+
+        /*
+        ========================================================
+        START
+        ========================================================
+        */
+
+        try {
+
+            recognition.start();
+
+        }
+
+        catch (error) {
 
             console.log(
-                "Speech recognition:",
-                event.error
+                "Recognition could not start yet."
             );
 
-        };
+        }
+
+    }
 
 
     /*
@@ -979,46 +1354,15 @@ function createRecognition() {
     ============================================================
     */
 
-    try {
-
-        recognition.start();
-
-    }
-
-    catch (error) {
-
-        console.log(
-            "Waiting for microphone permission."
-        );
-
-    }
-}
-
-
-/*
-================================================================
-START EVERYTHING AUTOMATICALLY
-================================================================
-*/
-
-if (SpeechRecognition) {
-
     window.addEventListener(
         "load",
         function() {
 
-            createRecognition();
+            startRecognition();
 
         }
     );
 
-}
-
-else {
-
-    console.error(
-        "This browser does not support Speech Recognition."
-    );
 }
 
 </script>
