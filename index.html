@@ -882,8 +882,9 @@ function spellIndividualLetters(text) {
    → C-A-T
 */
 
-function explicitSpellCommand(text) {
-
+/* =========================================================
+   SYLLABLE ENGINE
+   ========================================================= */
   const match =
     text.match(
       /^(?:please\s+)?spell\s+(?:the\s+word\s+)?([a-z]+)$/i
