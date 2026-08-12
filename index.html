@@ -44,12 +44,12 @@ select {
   border: 1px solid #555;
   border-radius: 6px;
   background: #252525;
-  color: white;
+  color: #fff;
   cursor: pointer;
 }
 
 button:disabled {
-  opacity: .45;
+  opacity: 0.45;
   cursor: default;
 }
 
@@ -73,9 +73,9 @@ button:disabled {
   width: 100%;
   max-width: 1900px;
   text-align: center;
+  font-size: 90px;
   font-weight: 700;
   line-height: 1.12;
-  font-size: 90px;
 }
 
 #captionText {
@@ -84,11 +84,11 @@ button:disabled {
   overflow: hidden;
   overflow-wrap: anywhere;
   word-break: normal;
-  transition: opacity .15s ease, font-size .1s ease;
+  transition: opacity 0.15s ease, font-size 0.1s ease;
 }
 
 #captionText.interim {
-  opacity: .82;
+  opacity: 0.82;
 }
 
 #captionText.hidden {
@@ -97,7 +97,7 @@ button:disabled {
 
 #captionText.spelling {
   font-weight: 900;
-  letter-spacing: .08em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -110,44 +110,49 @@ button:disabled {
 <body>
 
 <div id="controls">
+  <button id="startBtn">▶ Start Listening</button>
+  <button id="stopBtn" disabled>■ Stop</button>
+  <button id="clearBtn">Clear</button>
+  <button id="fullscreenBtn">⛶ Full Screen</button>
 
-<button id="startBtn">▶ Start Listening</button>
-<button id="stopBtn" disabled>■ Stop</button>
-<button id="clearBtn">Clear</button>
-<button id="fullscreenBtn">⛶ Full Screen</button>
+  <label>
+    Size:
+    <select id="sizeSelect">
+      <option value="60">60</option>
+      <option value="72">72</option>
+      <option value="80">80</option>
+      <option value="90" selected>90</option>
+      <option value="100">100</option>
+      <option value="110">110</option>
+      <option value="120">120</option>
+    </select>
+  </label>
 
-<label>
-Size:
-<select id="sizeSelect">
-<option value="60">60</option>
-<option value="72">72</option>
-<option value="80">80</option>
-<option value="90" selected>90</option>
-<option value="100">100</option>
-<option value="110">110</option>
-<option value="120">120</option>
-</select>
-</label>
+  <label>
+    Language:
+    <select id="languageMode">
+      <option value="en-US">English</option>
+      <option value="th-TH">Thai</option>
+    </select>
+  </label>
 
-<label>
-Language:
-<select id="languageMode">
-<option value="en-US">English</option>
-<option value="th-TH">Thai</option>
-</select>
-</label>
-
-<span id="status">Ready</span>
-
+  <span id="status">Ready</span>
 </div>
 
 <main id="captionArea">
-<div id="caption">
-<div id="captionText"></div>
-</div>
+  <div id="caption">
+    <div id="captionText"></div>
+  </div>
 </main>
 
-<script>const SpeechRecognition =
+<script>
+"use strict";
+
+/* =========================================================
+   ELEMENTS
+   ========================================================= */
+
+const SpeechRecognition =
   window.SpeechRecognition ||
   window.webkitSpeechRecognition;
 
@@ -161,6 +166,10 @@ const status = document.getElementById("status");
 const caption = document.getElementById("caption");
 const captionText = document.getElementById("captionText");
 
+/* =========================================================
+   STATE
+   ========================================================= */
+
 let recognition = null;
 let listening = false;
 
@@ -171,20 +180,28 @@ let silenceTimer = null;
 
 let spellingWaiting = false;
 
-let lastFinalTranscript = "";
+let lastFinalText = "";
 
 const SILENCE_DELAY = 500;
 const MIN_FONT_SIZE = 40;
+
+/* =========================================================
+   STATUS
+   ========================================================= */
 
 function setStatus(text) {
   status.textContent = text;
 }
 
+/* =========================================================
+   CLEAR
+   ========================================================= */
+
 function clearCaption() {
   currentCaption = "";
   currentInterim = "";
   spellingWaiting = false;
-  lastFinalTranscript = "";
+  lastFinalText = "";
 
   captionText.textContent = "";
 
@@ -192,6 +209,10 @@ function clearCaption() {
   captionText.classList.remove("spelling");
   captionText.classList.add("hidden");
 }
+
+/* =========================================================
+   SILENCE
+   ========================================================= */
 
 function cancelSilenceTimer() {
   if (silenceTimer !== null) {
@@ -207,7 +228,7 @@ function restartSilenceTimer() {
     currentCaption = "";
     currentInterim = "";
     spellingWaiting = false;
-    lastFinalTranscript = "";
+    lastFinalText = "";
 
     captionText.textContent = "";
 
@@ -218,6 +239,10 @@ function restartSilenceTimer() {
     silenceTimer = null;
   }, SILENCE_DELAY);
 }
+
+/* =========================================================
+   CLEANUP
+   ========================================================= */
 
 function removeFillers(text) {
   return text
@@ -247,10 +272,14 @@ function removeImmediateRepeats(text) {
   return result.join(" ");
 }
 
-function convertPunctuation(text) {
+/* =========================================================
+   PUNCTUATION
+   ========================================================= */
+
+function convertSpokenPunctuation(text) {
   let t = text;
 
-  const rules = [
+  const replacements = [
     [/\bquestion mark\b/gi, "?"],
     [/\bquestionmark\b/gi, "?"],
     [/\bexclamation mark\b/gi, "!"],
@@ -270,14 +299,50 @@ function convertPunctuation(text) {
     [/\bnew paragraph\b/gi, "\n\n"]
   ];
 
-  for (const [pattern, replacement] of rules) {
+  for (const [pattern, replacement] of replacements) {
     t = t.replace(pattern, replacement);
   }
 
   return t;
 }
 
-const numberUnits = {
+/*
+   Basic question detection.
+
+   This does NOT convert words such as:
+   "are" -> R
+   "you" -> U
+
+   It only adds ? to common question structures.
+*/
+function addQuestionMark(text) {
+  const t = text.trim();
+
+  if (!t || /[.!?]$/.test(t)) {
+    return t;
+  }
+
+  const questionPattern =
+    /^(who|what|when|where|why|how|which|whose|whom)\b/i;
+
+  const auxiliaryPattern =
+    /^(am|is|are|was|were|do|does|did|can|could|will|would|should|shall|may|might|have|has|had)\b/i;
+
+  if (
+    questionPattern.test(t) ||
+    auxiliaryPattern.test(t)
+  ) {
+    return t + "?";
+  }
+
+  return t;
+}
+
+/* =========================================================
+   NUMBERS
+   ========================================================= */
+
+const units = {
   zero: 0,
   one: 1,
   two: 2,
@@ -300,7 +365,7 @@ const numberUnits = {
   nineteen: 19
 };
 
-const numberTens = {
+const tens = {
   twenty: 20,
   thirty: 30,
   forty: 40,
@@ -317,26 +382,22 @@ function wordsToNumber(words) {
   let found = false;
 
   for (const word of words) {
-    if (numberUnits[word] !== undefined) {
-      current += numberUnits[word];
+    if (units[word] !== undefined) {
+      current += units[word];
       found = true;
-    }
-    else if (numberTens[word] !== undefined) {
-      current += numberTens[word];
+    } else if (tens[word] !== undefined) {
+      current += tens[word];
       found = true;
-    }
-    else if (word === "hundred") {
+    } else if (word === "hundred") {
       if (current === 0) current = 1;
       current *= 100;
       found = true;
-    }
-    else if (word === "thousand") {
+    } else if (word === "thousand") {
       if (current === 0) current = 1;
       total += current * 1000;
       current = 0;
       found = true;
-    }
-    else {
+    } else {
       return null;
     }
   }
@@ -345,46 +406,50 @@ function wordsToNumber(words) {
 }
 
 function convertNumbers(text) {
-  const words = text.split(/\s+/);
-  const result = [];
+  const tokens = text.split(/\s+/);
+  const output = [];
+
   let i = 0;
 
-  while (i < words.length) {
+  while (i < tokens.length) {
     let bestNumber = null;
     let bestLength = 0;
 
     for (
-      let length = Math.min(6, words.length - i);
+      let length = Math.min(6, tokens.length - i);
       length >= 1;
       length--
     ) {
-      const candidate = words
+      const candidate = tokens
         .slice(i, i + length)
         .map(word =>
           word.toLowerCase().replace(/[^a-z]/g, "")
         );
 
-      const number = wordsToNumber(candidate);
+      const value = wordsToNumber(candidate);
 
-      if (number !== null) {
-        bestNumber = number;
+      if (value !== null) {
+        bestNumber = value;
         bestLength = length;
         break;
       }
     }
 
     if (bestLength > 0) {
-      result.push(String(bestNumber));
+      output.push(String(bestNumber));
       i += bestLength;
-    }
-    else {
-      result.push(words[i]);
+    } else {
+      output.push(tokens[i]);
       i++;
     }
   }
 
-  return result.join(" ");
+  return output.join(" ");
 }
+
+/* =========================================================
+   SPELLING
+   ========================================================= */
 
 function spellWord(word) {
   const clean = word
@@ -398,7 +463,15 @@ function spellWord(word) {
   return clean.split("").join("-");
 }
 
-function extractSpellCommand(text) {
+/*
+   Matches:
+     spell apple
+     spell the word apple
+     please spell apple
+     please spell the word apple
+*/
+
+function getSpellWord(text) {
   const cleaned = text
     .trim()
     .replace(/[.!?]+$/g, "")
@@ -411,7 +484,7 @@ function extractSpellCommand(text) {
   return match ? match[1] : null;
 }
 
-function isSpellOnlyCommand(text) {
+function isSpellOnly(text) {
   const cleaned = text
     .trim()
     .replace(/[.!?]+$/g, "")
@@ -425,14 +498,14 @@ function isSpellOnlyCommand(text) {
 }
 
 function processSpelling(text) {
-  const directWord = extractSpellCommand(text);
+  const directWord = getSpellWord(text);
 
   if (directWord) {
     spellingWaiting = false;
     return spellWord(directWord);
   }
 
-  if (isSpellOnlyCommand(text)) {
+  if (isSpellOnly(text)) {
     spellingWaiting = true;
     return "";
   }
@@ -451,6 +524,10 @@ function processSpelling(text) {
   return null;
 }
 
+/* =========================================================
+   NORMAL SPEECH
+   ========================================================= */
+
 function processNormalSpeech(text) {
   if (!text) {
     return "";
@@ -460,7 +537,7 @@ function processNormalSpeech(text) {
 
   t = removeFillers(t);
   t = removeImmediateRepeats(t);
-  t = convertPunctuation(t);
+  t = convertSpokenPunctuation(t);
   t = convertNumbers(t);
 
   t = t
@@ -470,26 +547,16 @@ function processNormalSpeech(text) {
     .replace(/[ \t]{2,}/g, " ")
     .trim();
 
+  t = addQuestionMark(t);
+
   return t;
 }
 
-function processSpeech(text) {
-  if (!text) {
-    return "";
-  }
+/* =========================================================
+   RENDER
+   ========================================================= */
 
-  const spellingResult = processSpelling(text);
-
-  if (spellingResult !== null) {
-    return spellingResult;
-  }
-
-  if (spellingWaiting) {
-    return "";
-  }
-
-  return processNormalSpeech(text);
-}function showCaption() {
+function showCaption() {
   captionText.classList.remove("hidden");
 }
 
@@ -541,6 +608,10 @@ function renderCaption() {
   fitCaption();
 }
 
+/* =========================================================
+   FINAL SPEECH
+   ========================================================= */
+
 function appendFinalSpeech(text) {
   if (!text.trim()) {
     return;
@@ -572,8 +643,8 @@ function appendFinalSpeech(text) {
   }
 
   if (
-    processed.trim().toLowerCase() ===
-    lastFinalTranscript.trim().toLowerCase()
+    processed.toLowerCase() ===
+    lastFinalText.toLowerCase()
   ) {
     return;
   }
@@ -581,8 +652,7 @@ function appendFinalSpeech(text) {
   if (/^[,.!?;:)\]}]/.test(processed)) {
     currentCaption =
       currentCaption.trim() + processed;
-  }
-  else {
+  } else {
     currentCaption =
       (
         currentCaption +
@@ -593,12 +663,16 @@ function appendFinalSpeech(text) {
         .trim();
   }
 
-  lastFinalTranscript = processed;
+  lastFinalText = processed;
 
   captionText.classList.remove("spelling");
 
   renderCaption();
 }
+
+/* =========================================================
+   SPEECH RECOGNITION
+   ========================================================= */
 
 if (!SpeechRecognition) {
 
@@ -608,8 +682,7 @@ if (!SpeechRecognition) {
     "Chrome speech recognition is unavailable."
   );
 
-}
-else {
+} else {
 
   recognition = new SpeechRecognition();
 
@@ -618,26 +691,7 @@ else {
   recognition.maxAlternatives = 5;
   recognition.lang = languageMode.value;
 
-  languageMode.addEventListener(
-    "change",
-    () => {
-
-      recognition.lang =
-        languageMode.value;
-
-      if (listening) {
-
-        try {
-          recognition.stop();
-        }
-        catch (error) {}
-
-      }
-    }
-  );
-
   recognition.onstart = () => {
-
     listening = true;
 
     startBtn.disabled = true;
@@ -652,8 +706,8 @@ else {
 
     currentInterim = "";
 
-    let newlyFinalized = "";
-    let newestInterim = "";
+    let finalText = "";
+    let interimText = "";
 
     for (
       let i = event.resultIndex;
@@ -661,61 +715,48 @@ else {
       i++
     ) {
 
-      const result =
-        event.results[i];
+      const result = event.results[i];
 
       const transcript =
-        result[0]
-          .transcript
-          .trim();
+        result[0].transcript.trim();
 
       if (!transcript) {
         continue;
       }
 
       if (result.isFinal) {
-
-        newlyFinalized +=
-          " " + transcript;
-
-      }
-      else {
-
-        newestInterim +=
-          " " + transcript;
-
+        finalText += " " + transcript;
+      } else {
+        interimText += " " + transcript;
       }
     }
 
-    if (newlyFinalized.trim()) {
+    if (finalText.trim()) {
 
       appendFinalSpeech(
-        newlyFinalized.trim()
+        finalText.trim()
       );
 
       restartSilenceTimer();
-
     }
 
     if (
-      newestInterim.trim() &&
+      interimText.trim() &&
       !spellingWaiting
     ) {
 
       currentInterim =
         processNormalSpeech(
-          newestInterim.trim()
+          interimText.trim()
         );
 
-    }
-    else {
+    } else {
 
       currentInterim = "";
 
     }
 
     renderCaption();
-
   };
 
   recognition.onerror = (event) => {
@@ -751,25 +792,20 @@ else {
         }
 
         try {
-
           recognition.lang =
             languageMode.value;
 
           recognition.start();
-
-        }
-        catch (error) {}
+        } catch (error) {}
 
       }, 200);
 
-    }
-    else {
+    } else {
 
       startBtn.disabled = false;
       stopBtn.disabled = true;
 
       setStatus("Stopped");
-
     }
   };
 
@@ -782,23 +818,17 @@ else {
       }
 
       clearCaption();
-
       cancelSilenceTimer();
 
       recognition.lang =
         languageMode.value;
 
       try {
-
         recognition.start();
-
-      }
-      catch (error) {
-
+      } catch (error) {
         setStatus(
           "Could not start listening."
         );
-
       }
     }
   );
@@ -812,26 +842,27 @@ else {
       cancelSilenceTimer();
 
       currentInterim = "";
-
       spellingWaiting = false;
 
       try {
         recognition.stop();
-      }
-      catch (error) {}
+      } catch (error) {}
 
       setStatus("Stopped");
-
     }
   );
+
 }
+
+/* =========================================================
+   CLEAR
+   ========================================================= */
 
 clearBtn.addEventListener(
   "click",
   () => {
 
     cancelSilenceTimer();
-
     clearCaption();
 
     setStatus(
@@ -841,6 +872,10 @@ clearBtn.addEventListener(
     );
   }
 );
+
+/* =========================================================
+   FONT SIZE
+   ========================================================= */
 
 sizeSelect.addEventListener(
   "change",
@@ -852,6 +887,33 @@ sizeSelect.addEventListener(
     fitCaption();
   }
 );
+
+/* =========================================================
+   LANGUAGE
+   ========================================================= */
+
+languageMode.addEventListener(
+  "change",
+  () => {
+
+    if (!recognition) {
+      return;
+    }
+
+    recognition.lang =
+      languageMode.value;
+
+    if (listening) {
+      try {
+        recognition.stop();
+      } catch (error) {}
+    }
+  }
+);
+
+/* =========================================================
+   FULL SCREEN
+   ========================================================= */
 
 fullscreenBtn.addEventListener(
   "click",
@@ -869,20 +931,16 @@ fullscreenBtn.addEventListener(
           .classList
           .add("hidden");
 
-      }
-      else {
+      } else {
 
         await document.exitFullscreen();
-
       }
 
-    }
-    catch (error) {
+    } catch (error) {
 
       setStatus(
         "Full screen unavailable."
       );
-
     }
   }
 );
@@ -897,10 +955,13 @@ document.addEventListener(
         .getElementById("controls")
         .classList
         .remove("hidden");
-
     }
   }
 );
+
+/* =========================================================
+   INITIALIZE
+   ========================================================= */
 
 caption.style.fontSize =
   sizeSelect.value;
