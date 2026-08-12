@@ -1,150 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Classroom Live Caption</title>
-
-<style>
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  margin: 0;
-  width: 100%;
-  height: 100%;
-  background: #000;
-  color: #fff;
-  font-family: Arial, Helvetica, sans-serif;
-  overflow: hidden;
-}
-
-body {
-  display: flex;
-  flex-direction: column;
-}
-
-#controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
-  background: #151515;
-  border-bottom: 1px solid #333;
-  flex-wrap: wrap;
-}
-
-button,
-select {
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 14px;
-  padding: 8px 11px;
-  border: 1px solid #555;
-  border-radius: 6px;
-  background: #252525;
-  color: white;
-  cursor: pointer;
-}
-
-button:disabled {
-  opacity: .45;
-  cursor: default;
-}
-
-#status {
-  margin-left: auto;
-  color: #aaa;
-  font-size: 13px;
-}
-
-#captionArea {
-  flex: 1;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 3vh 5vw;
-  overflow: hidden;
-}
-
-#caption {
-  width: 100%;
-  max-width: 1900px;
-  text-align: center;
-  font-weight: 700;
-  line-height: 1.12;
-  font-size: 90px;
-}
-
-#captionText {
-  width: 100%;
-  max-height: 4.48em;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-  word-break: normal;
-  transition: opacity .15s ease, font-size .1s ease;
-}
-
-#captionText.interim {
-  opacity: .82;
-}
-
-#captionText.hidden {
-  opacity: 0;
-}
-
-#controls.hidden {
-  display: none;
-}
-</style>
-</head>
-
-<body>
-
-<div id="controls">
-
-  <button id="startBtn">▶ Start Listening</button>
-  <button id="stopBtn" disabled>■ Stop</button>
-  <button id="clearBtn">Clear</button>
-  <button id="fullscreenBtn">⛶ Full Screen</button>
-
-  <label>
-    Size:
-    <select id="sizeSelect">
-      <option value="60">60</option>
-      <option value="72">72</option>
-      <option value="80">80</option>
-      <option value="90" selected>90</option>
-      <option value="100">100</option>
-      <option value="110">110</option>
-      <option value="120">120</option>
-    </select>
-  </label>
-
-  <label>
-    Language:
-    <select id="languageMode">
-      <option value="en-US">English</option>
-      <option value="th-TH">Thai</option>
-    </select>
-  </label>
-
-  <span id="status">Ready</span>
-
-</div>
-
-<main id="captionArea">
-  <div id="caption">
-    <div id="captionText"></div>
-  </div>
-</main>
-
 <script>
 
 /* =========================================================
-   CLASSROOM LIVE CAPTION — REVISED ENGINE
+   CLASSROOM LIVE CAPTION
+   SMART TRANSCRIPTION + EXPLICIT SPELLING
    ========================================================= */
 
 
@@ -192,25 +50,48 @@ let recognition = null;
 
 let listening = false;
 
-/*
-   IMPORTANT:
-
-   We no longer keep the entire history.
-
-   This is ONLY the current caption sentence/
-   utterance.
-*/
 let currentCaption = "";
 
 let currentInterim = "";
 
 let silenceTimer = null;
 
+/*
+   SPELLING MODE
+
+   This is activated ONLY when the user says:
+
+   "spell"
+
+   or:
+
+   "spell specific"
+
+   or:
+
+   "spell the word specific"
+*/
+
 let spellingMode = false;
 
-let syllableMode = false;
+
+/*
+   When the user says only:
+
+   "spell"
+
+   we wait for the next word.
+*/
+
+let waitingForSpellingWord = false;
+
+
+/*
+   Prevent duplicate finalized results.
+*/
 
 let lastFinalText = "";
+
 
 const SILENCE_DELAY = 500;
 
@@ -222,7 +103,9 @@ const MIN_FONT_SIZE = 40;
    ========================================================= */
 
 function setStatus(text) {
+
   status.textContent = text;
+
 }
 
 
@@ -233,11 +116,13 @@ function setStatus(text) {
 function clearCaption() {
 
   currentCaption = "";
+
   currentInterim = "";
 
   captionText.textContent = "";
 
   captionText.classList.remove("interim");
+
   captionText.classList.add("hidden");
 
 }
@@ -254,7 +139,9 @@ function cancelSilenceTimer() {
     clearTimeout(silenceTimer);
 
     silenceTimer = null;
+
   }
+
 }
 
 
@@ -265,28 +152,25 @@ function restartSilenceTimer() {
   silenceTimer = setTimeout(() => {
 
     currentCaption = "";
+
     currentInterim = "";
 
     captionText.textContent = "";
 
     captionText.classList.remove("interim");
+
     captionText.classList.add("hidden");
 
-    /*
-       A new sentence starts fresh.
-    */
     lastFinalText = "";
 
-    /*
-       Do not leave special modes running
-       after a complete silence.
-    */
     spellingMode = false;
-    syllableMode = false;
+
+    waitingForSpellingWord = false;
 
     silenceTimer = null;
 
   }, SILENCE_DELAY);
+
 }
 
 
@@ -297,11 +181,14 @@ function restartSilenceTimer() {
 function removeFillers(text) {
 
   return text
+
     .replace(
       /\b(um+|uh+|erm+|er+|hmm+|mm+)\b/gi,
       ""
     )
+
     .replace(/\s{2,}/g, " ")
+
     .trim();
 
 }
@@ -328,15 +215,17 @@ function removeImmediateRepeats(text) {
       word
         .toLowerCase()
         .replace(/[.,!?;:"'()-]/g, "") ===
-
       previous
         .toLowerCase()
         .replace(/[.,!?;:"'()-]/g, "")
     ) {
+
       continue;
+
     }
 
     result.push(word);
+
   }
 
   return result.join(" ");
@@ -443,10 +332,11 @@ function convertPunctuation(text) {
 
   for (const [pattern, replacement] of replacements) {
 
-    t = t.replace(
-      pattern,
-      replacement
-    );
+    t =
+      t.replace(
+        pattern,
+        replacement
+      );
 
   }
 
@@ -460,6 +350,7 @@ function convertPunctuation(text) {
    ========================================================= */
 
 const units = {
+
   zero: 0,
   one: 1,
   two: 2,
@@ -480,9 +371,12 @@ const units = {
   seventeen: 17,
   eighteen: 18,
   nineteen: 19
+
 };
 
+
 const tens = {
+
   twenty: 20,
   thirty: 30,
   forty: 40,
@@ -491,23 +385,16 @@ const tens = {
   seventy: 70,
   eighty: 80,
   ninety: 90
+
 };
 
-
-/*
-   Converts:
-
-   eight       → 8
-   twenty      → 20
-   twenty five → 25
-   one hundred → 100
-   one hundred twenty five → 125
-*/
 
 function wordsToNumber(words) {
 
   let total = 0;
+
   let current = 0;
+
   let found = false;
 
   for (const word of words) {
@@ -515,6 +402,7 @@ function wordsToNumber(words) {
     if (units[word] !== undefined) {
 
       current += units[word];
+
       found = true;
 
     }
@@ -522,6 +410,7 @@ function wordsToNumber(words) {
     else if (tens[word] !== undefined) {
 
       current += tens[word];
+
       found = true;
 
     }
@@ -533,6 +422,7 @@ function wordsToNumber(words) {
       }
 
       current *= 100;
+
       found = true;
 
     }
@@ -544,7 +434,9 @@ function wordsToNumber(words) {
       }
 
       total += current * 1000;
+
       current = 0;
+
       found = true;
 
     }
@@ -558,18 +450,15 @@ function wordsToNumber(words) {
   }
 
   if (!found) {
+
     return null;
+
   }
 
   return total + current;
 
 }
 
-
-/*
-   Replace number phrases without
-   accidentally changing ordinary words.
-*/
 
 function convertNumbers(text) {
 
@@ -583,14 +472,12 @@ function convertNumbers(text) {
   while (i < tokens.length) {
 
     let bestNumber = null;
+
     let bestLength = 0;
 
-    /*
-       Try sequences from longest to shortest.
-    */
-
     for (
-      let length = Math.min(6, tokens.length - i);
+      let length =
+        Math.min(6, tokens.length - i);
       length >= 1;
       length--
     ) {
@@ -610,7 +497,9 @@ function convertNumbers(text) {
       if (number !== null) {
 
         bestNumber = number;
+
         bestLength = length;
+
         break;
 
       }
@@ -643,649 +532,252 @@ function convertNumbers(text) {
 
 
 /* =========================================================
-   LETTER NAMES
-   ========================================================= */
-
-const letterNames = {
-
-  a: "A",
-  ay: "A",
-
-  b: "B",
-  bee: "B",
-
-  c: "C",
-  see: "C",
-
-  d: "D",
-  dee: "D",
-
-  e: "E",
-
-  f: "F",
-  ef: "F",
-
-  g: "G",
-  gee: "G",
-
-  h: "H",
-  aitch: "H",
-
-  i: "I",
-  eye: "I",
-
-  j: "J",
-  jay: "J",
-
-  k: "K",
-  kay: "K",
-
-  l: "L",
-  el: "L",
-
-  m: "M",
-  em: "M",
-
-  n: "N",
-  en: "N",
-
-  o: "O",
-
-  p: "P",
-  pee: "P",
-
-  q: "Q",
-  cue: "Q",
-
-  r: "R",
-  are: "R",
-
-  s: "S",
-  ess: "S",
-
-  t: "T",
-  tea: "T",
-
-  u: "U",
-  you: "U",
-
-  v: "V",
-  vee: "V",
-
-  w: "W",
-  doubleyou: "W",
-
-  x: "X",
-  ex: "X",
-
-  y: "Y",
-  why: "Y",
-
-  z: "Z",
-  zee: "Z",
-  zed: "Z"
-
-};
-
-
-/* =========================================================
-   DETECT LETTER RUNS INSIDE A SENTENCE
-   =========================================================
-
-   Example:
-
-   "The vowels are A E I O U"
-
-   becomes:
-
-   "The vowels are A, E, I, O, U"
-*/
-
-function convertLetterRuns(text) {
-
-  const words =
-    text.split(/\s+/);
-
-  const output = [];
-
-  let i = 0;
-
-  while (i < words.length) {
-
-    const clean =
-      words[i]
-        .toLowerCase()
-        .replace(/[^a-z]/g, "");
-
-    if (letterNames[clean]) {
-
-      const letters = [];
-
-      let j = i;
-
-      while (j < words.length) {
-
-        const candidate =
-          words[j]
-            .toLowerCase()
-            .replace(/[^a-z]/g, "");
-
-        if (!letterNames[candidate]) {
-          break;
-        }
-
-        letters.push(
-          letterNames[candidate]
-        );
-
-        j++;
-
-      }
-
-      /*
-         Only treat two or more consecutive
-         letter names as a letter sequence.
-
-         A single "I" remains ordinary text.
-      */
-
-      if (letters.length >= 2) {
-
-        output.push(
-          letters.join(", ")
-        );
-
-        i = j;
-
-        continue;
-
-      }
-
-    }
-
-    output.push(words[i]);
-
-    i++;
-
-  }
-
-  return output.join(" ");
-
-}
-
-
-/* =========================================================
    SPELLING
    ========================================================= */
 
-
 /*
-   Detect:
+   Convert a word into:
 
-   T-H-E-M-S-E-L-V-E-S
+   specific
 
-   and normalize it.
+   →
+
+   S-P-E-C-I-F-I-C
 */
 
-function normalizeHyphenSpelling(text) {
+function spellWord(word) {
 
-  return text.replace(
-    /\b([A-Za-z](?:-[A-Za-z])+)\b/g,
-    match =>
-      match.toUpperCase()
-  );
+  const clean =
+    word
+      .replace(/[^A-Za-z]/g, "")
+      .toUpperCase();
 
-}
+  if (!clean) {
 
-
-/*
-   Detect:
-
-   T H E M S E L V E S
-
-   when explicitly in spelling mode.
-*/
-
-function spellIndividualLetters(text) {
-
-  const words =
-    text
-      .trim()
-      .split(/\s+/);
-
-  if (words.length < 2) {
-    return text;
-  }
-
-  if (
-    words.every(word =>
-      /^[A-Za-z]$/.test(word)
-    )
-  ) {
-
-    return words
-      .map(word =>
-        word.toUpperCase()
-      )
-      .join("-");
+    return "";
 
   }
 
-  return text;
-
-}
-
-
-/*
-   "spell cat"
-
-   → C-A-T
-*/
-
-/* =========================================================
-   SYLLABLE ENGINE
-   ========================================================= */
-  const match =
-    text.match(
-      /^(?:please\s+)?spell\s+(?:the\s+word\s+)?([a-z]+)$/i
-    );
-
-  if (!match) {
-    return null;
-  }
-
-  return match[1]
-    .toUpperCase()
+  return clean
     .split("")
     .join("-");
 
 }
 
 
-/* =========================================================
-   SYLLABLE ENGINE
-   ========================================================= */
+/*
+   Detect:
 
-const knownSyllables = {
+   spell specific
 
-  mitigating: "mit-i-gat-ing",
+   spell the word specific
 
-  themselves: "them-selves",
+   spell "specific"
 
-  pronunciation: "pro-nun-ci-a-tion",
+   spell shit
 
-  transcription: "tran-scrip-tion",
+   etc.
+*/
 
-  communication: "com-mu-ni-ca-tion",
+function extractSpellCommand(text) {
 
-  education: "ed-u-ca-tion",
-
-  classroom: "class-room",
-
-  teacher: "teach-er",
-
-  student: "stu-dent",
-
-  science: "sci-ence",
-
-  English: "Eng-lish",
-
-  alphabet: "al-pha-bet",
-
-  vocabulary: "vo-cab-u-lar-y",
-
-  photosynthesis: "pho-to-syn-the-sis"
-
-};
+  const cleaned =
+    text
+      .trim()
+      .replace(/[.!?]+$/g, "")
+      .trim();
 
 
-function syllabifyWord(word) {
+  const match =
+    cleaned.match(
+      /^(?:please\s+)?spell(?:\s+the\s+word)?(?:\s+)([a-z]+)$/i
+    );
 
-  const original = word;
 
-  const clean =
-    word
-      .toLowerCase()
-      .replace(/[^a-z]/g, "");
+  if (!match) {
 
-  if (knownSyllables[clean]) {
-    return knownSyllables[clean];
-  }
-
-  if (clean.length <= 3) {
-    return original;
-  }
-
-  /*
-     Basic syllable approximation.
-     Explicit syllable mode should be used
-     for classroom syllabication.
-  */
-
-  const vowels = "aeiouy";
-
-  let result = "";
-
-  let previousWasVowel = false;
-
-  for (let i = 0; i < clean.length; i++) {
-
-    const char = clean[i];
-
-    const isVowel =
-      vowels.includes(char);
-
-    if (
-      i > 1 &&
-      isVowel &&
-      !previousWasVowel &&
-      result.length > 3
-    ) {
-
-      result += "-";
-
-    }
-
-    result += char;
-
-    previousWasVowel = isVowel;
+    return null;
 
   }
 
-  return result;
+
+  return match[1];
 
 }
 
 
 /*
-   Explicit command:
-
-   syllabicate mitigating
-
-   →
-   mit-i-gat-ing
+   Detect the word "spell" by itself.
 */
 
-function explicitSyllableCommand(text) {
+function isSpellCommand(text) {
 
-  const match =
-    text.match(
-      /^(?:please\s+)?(?:syllabicate|syllabify|break\s+(?:it\s+)?into\s+syllables)\s+(.+)$/i
-    );
-
-  if (!match) {
-    return null;
-  }
-
-  return match[1]
-    .trim()
-    .split(/\s+/)
-    .map(word =>
-      syllabifyWord(word)
-    )
-    .join(" ");
-
-}
-
-
-/* =========================================================
-   COMMAND DETECTION
-   ========================================================= */
-
-function detectCommands(text) {
-
-  const lower =
+  const cleaned =
     text
       .trim()
-      .toLowerCase();
+      .toLowerCase()
+      .replace(/[.!?]+$/g, "")
+      .trim();
 
-
-  /*
-     SPELLING MODE
-  */
-
-  if (
-    lower === "spelling mode" ||
-    lower === "start spelling" ||
-    lower === "start spelling mode"
-  ) {
-
-    spellingMode = true;
-    syllableMode = false;
-
-    return {
-      command: true,
-      output: ""
-    };
-
-  }
-
-
-  if (
-    lower === "stop spelling" ||
-    lower === "exit spelling mode"
-  ) {
-
-    spellingMode = false;
-
-    return {
-      command: true,
-      output: ""
-    };
-
-  }
-
-
-  /*
-     SYLLABLE MODE
-  */
-
-  if (
-    lower === "syllable mode" ||
-    lower === "start syllable mode" ||
-    lower === "start syllabication"
-  ) {
-
-    syllableMode = true;
-    spellingMode = false;
-
-    return {
-      command: true,
-      output: ""
-    };
-
-  }
-
-
-  if (
-    lower === "stop syllable mode" ||
-    lower === "exit syllable mode"
-  ) {
-
-    syllableMode = false;
-
-    return {
-      command: true,
-      output: ""
-    };
-
-  }
-
-
-  /*
-     LANGUAGE COMMANDS
-  */
-
-  if (
-    lower.includes("switch to thai") ||
-    lower.includes("switch to thai translation") ||
-    lower.includes("switch to thai text")
-  ) {
-
-    languageMode.value = "th-TH";
-
-    if (recognition) {
-      recognition.lang = "th-TH";
-    }
-
-    return {
-      command: true,
-      output: ""
-    };
-
-  }
-
-
-  if (
-    lower.includes("switch to english") ||
-    lower.includes("switch back to english") ||
-    lower.includes("switch to english text") ||
-    lower.includes("switch to english translation")
-  ) {
-
-    languageMode.value = "en-US";
-
-    if (recognition) {
-      recognition.lang = "en-US";
-    }
-
-    return {
-      command: true,
-      output: ""
-    };
-
-  }
-
-
-  return {
-    command: false,
-    output: null
-  };
+  return (
+    cleaned === "spell" ||
+    cleaned === "please spell"
+  );
 
 }
 
 
 /* =========================================================
-   MAIN PROCESSOR
+   PROCESS SPELLING
    ========================================================= */
 
-function processSpeech(text) {
+function processSpelling(text) {
 
-  if (!text) {
-    return "";
-  }
-
-  let t =
+  const cleaned =
     text
+      .trim()
+      .replace(/[.!?]+$/g, "")
       .trim();
 
 
   /*
-     Commands first.
+     "spell specific"
   */
 
-  const command =
-    detectCommands(t);
+  const directWord =
+    extractSpellCommand(cleaned);
 
-  if (command.command) {
-    return command.output;
-  }
-
-
-  /*
-     Explicit spelling command.
-  */
-
-  const explicitSpell =
-    explicitSpellCommand(t);
-
-  if (explicitSpell !== null) {
+  if (directWord) {
 
     spellingMode = false;
 
-    return explicitSpell;
+    waitingForSpellingWord = false;
+
+    return spellWord(directWord);
 
   }
 
 
   /*
-     Explicit syllabication command.
+     "spell"
+     by itself means:
+     wait for the next word.
   */
 
-  const explicitSyllable =
-    explicitSyllableCommand(t);
+  if (isSpellCommand(cleaned)) {
 
-  if (explicitSyllable !== null) {
+    spellingMode = true;
 
-    syllableMode = false;
+    waitingForSpellingWord = true;
 
-    return explicitSyllable;
+    return "";
 
   }
 
 
   /*
-     Hyphenated spelling.
+     If we are waiting for a spelling word,
+     spell the next spoken word.
   */
 
-  t =
-    normalizeHyphenSpelling(t);
+  if (
+    spellingMode &&
+    waitingForSpellingWord
+  ) {
 
+    const words =
+      cleaned.split(/\s+/);
 
-  /*
-     SPELLING MODE
-  */
+    /*
+       Use the first normal word.
+    */
 
-  if (spellingMode) {
+    const word =
+      words[0];
 
-    return spellIndividualLetters(t);
+    if (/^[A-Za-z]+$/.test(word)) {
+
+      spellingMode = false;
+
+      waitingForSpellingWord = false;
+
+      return spellWord(word);
+
+    }
 
   }
 
 
-  /*
-     SYLLABLE MODE
-  */
+  return null;
 
-  if (syllableMode) {
+}
 
-    return t
-      .split(/\s+/)
-      .map(word =>
-        syllabifyWord(word)
-      )
-      .join(" ");
+
+/* =========================================================
+   NORMAL SPEECH PROCESSOR
+   ========================================================= */
+
+function processNormalSpeech(text) {
+
+  if (!text) {
+
+    return "";
 
   }
 
+  let t =
+    text.trim();
+
 
   /*
-     Normal speech.
+     Remove fillers.
   */
 
   t =
     removeFillers(t);
 
+
+  /*
+     Remove immediate duplicated words.
+  */
+
   t =
     removeImmediateRepeats(t);
+
+
+  /*
+     Convert spoken punctuation.
+  */
 
   t =
     convertPunctuation(t);
 
-  t =
-    convertNumbers(t);
-
-  t =
-    convertLetterRuns(t);
-
 
   /*
-     Final punctuation cleanup.
+     Convert number words.
   */
 
   t =
+    convertNumbers(t);
+
+
+  /*
+     IMPORTANT:
+
+     There is NO automatic conversion of:
+
+     are → R
+     you → U
+     why → Y
+     tea → T
+
+     Normal speech remains normal speech.
+  */
+
+
+  t =
     t
-      .replace(/\s+([,.!?;:])/g, "$1")
+      .replace(/\s+([,.!?;:)\]}])/g, "$1")
       .replace(/([(\[])\s+/g, "$1")
       .replace(/\s+([)\]])/g, "$1")
       .replace(/[ \t]{2,}/g, " ")
@@ -1293,6 +785,60 @@ function processSpeech(text) {
 
 
   return t;
+
+}
+
+
+/* =========================================================
+   MAIN SPEECH PROCESSOR
+   ========================================================= */
+
+function processSpeech(text) {
+
+  if (!text) {
+
+    return "";
+
+  }
+
+
+  /*
+     SPELLING COMMAND HAS PRIORITY.
+  */
+
+  const spellingResult =
+    processSpelling(text);
+
+
+  if (spellingResult !== null) {
+
+    return spellingResult;
+
+  }
+
+
+  /*
+     If spelling mode is active but
+     this isn't the spelling word yet,
+     don't accidentally process it
+     as normal speech.
+  */
+
+  if (
+    spellingMode &&
+    waitingForSpellingWord
+  ) {
+
+    return "";
+
+  }
+
+
+  /*
+     Everything else is normal speech.
+  */
+
+  return processNormalSpeech(text);
 
 }
 
@@ -1322,19 +868,18 @@ function hideCaption() {
 function fitCaption() {
 
   if (!captionText.textContent.trim()) {
+
     return;
+
   }
 
   let fontSize =
     Number(sizeSelect.value);
 
+
   caption.style.fontSize =
     fontSize + "px";
 
-
-  /*
-     Maximum four visible lines.
-  */
 
   while (
     captionText.scrollHeight >
@@ -1403,21 +948,78 @@ function renderCaption() {
 function appendFinalSpeech(text) {
 
   if (!text.trim()) {
+
     return;
-  }
 
-  const processed =
-    processSpeech(text);
-
-
-  if (!processed.trim()) {
-    return;
   }
 
 
   /*
-     Prevent the same finalized chunk
-     from being added twice.
+     SPELLING COMMAND
+
+     This is handled before normal speech.
+  */
+
+  const spellingResult =
+    processSpelling(text);
+
+
+  if (spellingResult !== null) {
+
+    if (spellingResult.trim()) {
+
+      currentCaption =
+        spellingResult;
+
+    }
+
+    else {
+
+      currentCaption = "";
+
+    }
+
+    currentInterim = "";
+
+    renderCaption();
+
+    return;
+
+  }
+
+
+  /*
+     If we are waiting for the spelling word,
+     don't add it as ordinary text.
+  */
+
+  if (
+    spellingMode &&
+    waitingForSpellingWord
+  ) {
+
+    return;
+
+  }
+
+
+  /*
+     Normal speech.
+  */
+
+  const processed =
+    processNormalSpeech(text);
+
+
+  if (!processed.trim()) {
+
+    return;
+
+  }
+
+
+  /*
+     Prevent duplicate finalized chunks.
   */
 
   if (
@@ -1431,7 +1033,7 @@ function appendFinalSpeech(text) {
 
 
   /*
-     Punctuation should attach directly.
+     Punctuation attaches directly.
   */
 
   if (
@@ -1461,6 +1063,9 @@ function appendFinalSpeech(text) {
   lastFinalText =
     processed;
 
+
+  renderCaption();
+
 }
 
 
@@ -1477,6 +1082,7 @@ if (!SpeechRecognition) {
   );
 
 }
+
 else {
 
   recognition =
@@ -1505,16 +1111,14 @@ else {
         languageMode.value;
 
 
-      /*
-         Restart recognition so the new
-         language takes effect immediately.
-      */
-
       if (listening) {
 
         try {
+
           recognition.stop();
+
         }
+
         catch (error) {}
 
       }
@@ -1546,13 +1150,6 @@ else {
 
   recognition.onresult = (event) => {
 
-    /*
-       IMPORTANT:
-
-       Every new sound resets the 3-second
-       disappearance countdown.
-    */
-
     cancelSilenceTimer();
 
 
@@ -1561,22 +1158,8 @@ else {
 
     let newlyFinalized = "";
 
-
     let newestInterim = "";
 
-
-    /*
-       ONLY inspect new results.
-
-       We do not rebuild the entire
-       transcript on every event.
-
-       This eliminates the repeated:
-
-       "Ion Caption Ion Caption Ion..."
-
-       problem.
-    */
 
     for (
       let i = event.resultIndex;
@@ -1595,7 +1178,9 @@ else {
 
 
       if (!transcript) {
+
         continue;
+
       }
 
 
@@ -1617,45 +1202,55 @@ else {
 
 
     /*
-       Add only newly finalized text.
+       FINAL SPEECH
     */
 
     if (newlyFinalized.trim()) {
 
-  appendFinalSpeech(
-    newlyFinalized.trim()
-  );
+      appendFinalSpeech(
+        newlyFinalized.trim()
+      );
 
-  restartSilenceTimer();
+      restartSilenceTimer();
 
-}
+    }
 
 
     /*
-       Show the current unfinished
-       speech without permanently
-       adding it to the caption.
+       INTERIM SPEECH
+
+       Do NOT interfere with spelling mode.
     */
 
-    if (newestInterim.trim()) {
+    if (
+      newestInterim.trim() &&
+      !spellingMode
+    ) {
 
       currentInterim =
-        processSpeech(
+        processNormalSpeech(
           newestInterim.trim()
         );
 
     }
 
 
+    /*
+       During spelling mode,
+       hide interim results until
+       the complete spelling command
+       is finalized.
+    */
+
+    else {
+
+      currentInterim = "";
+
+    }
+
+
     renderCaption();
 
-
-    /*
-       Start the disappearance timer
-       when the browser has finalized
-       speech and there is currently
-       no unfinished speech.
-    */
 
     if (
       newlyFinalized.trim() &&
@@ -1695,11 +1290,6 @@ else {
     }
 
 
-    /*
-       Do not kill the application for
-       temporary recognition errors.
-    */
-
     setStatus(
       "Listening…"
     );
@@ -1715,18 +1305,12 @@ else {
 
     if (listening) {
 
-      /*
-         Chrome sometimes ends its speech
-         recognition session automatically.
-
-         Restart it without clearing the
-         current caption.
-      */
-
       setTimeout(() => {
 
         if (!listening) {
+
           return;
+
         }
 
         try {
@@ -1737,11 +1321,13 @@ else {
           recognition.start();
 
         }
+
         catch (error) {}
 
       }, 200);
 
     }
+
     else {
 
       startBtn.disabled = false;
@@ -1764,7 +1350,9 @@ else {
     () => {
 
       if (listening) {
+
         return;
+
       }
 
 
@@ -1774,9 +1362,10 @@ else {
 
       spellingMode = false;
 
-      syllableMode = false;
+      waitingForSpellingWord = false;
 
       lastFinalText = "";
+
 
       recognition.lang =
         languageMode.value;
@@ -1787,6 +1376,7 @@ else {
         recognition.start();
 
       }
+
       catch (error) {
 
         setStatus(
@@ -1813,10 +1403,19 @@ else {
 
       currentInterim = "";
 
+      spellingMode = false;
+
+      waitingForSpellingWord = false;
+
+
       try {
+
         recognition.stop();
+
       }
+
       catch (error) {}
+
 
       setStatus("Stopped");
 
@@ -1842,7 +1441,8 @@ clearBtn.addEventListener(
 
     spellingMode = false;
 
-    syllableMode = false;
+    waitingForSpellingWord = false;
+
 
     setStatus(
       listening
@@ -1892,6 +1492,7 @@ fullscreenBtn.addEventListener(
           .add("hidden");
 
       }
+
       else {
 
         await document.exitFullscreen();
@@ -1899,6 +1500,7 @@ fullscreenBtn.addEventListener(
       }
 
     }
+
     catch (error) {
 
       setStatus(
@@ -1933,11 +1535,8 @@ document.addEventListener(
    ========================================================= */
 
 caption.style.fontSize =
-  sizeSelect.value + "px";
+  sizeSelect.value;
 
 hideCaption();
 
 </script>
-
-</body>
-</html>
