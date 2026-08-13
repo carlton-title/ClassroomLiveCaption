@@ -2,237 +2,108 @@
 <html lang="en">
 
 <head>
-
 <meta charset="UTF-8">
-
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Classroom Live Transcription</title>
 
 <style>
 
-html,
-body {
-
+html, body {
     margin: 0;
     padding: 0;
-
     width: 100%;
     height: 100%;
-
     overflow: hidden;
-
     background: #000;
-
-    font-family:
-        Arial,
-        Helvetica,
-        sans-serif;
+    font-family: Arial, Helvetica, sans-serif;
 }
-
-
-/* ============================================================
-   CAPTION
-   ============================================================ */
 
 #caption {
-
     position: fixed;
-
     top: 50%;
     left: 50%;
-
-    transform:
-        translate(-50%, -50%);
-
+    transform: translate(-50%, -50%);
     width: 90vw;
-
     max-width: 1500px;
-
     max-height: 4em;
-
     overflow: hidden;
-
     text-align: center;
-
     color: white;
-
     font-size: 96px;
-
     font-weight: 600;
-
     line-height: 1.15;
-
     overflow-wrap: break-word;
-
     word-break: normal;
-
     opacity: 0;
-
-    transition:
-        opacity 0.1s ease;
-
+    transition: opacity 0.1s ease;
     pointer-events: none;
-
     user-select: none;
-
 }
-
 
 #caption.visible {
-
     opacity: 1;
-
 }
-
-
-/* ============================================================
-   TEACHER MENU
-   ============================================================ */
 
 #teacherMenu {
-
     position: fixed;
-
     top: 0;
     left: 0;
-
     width: 100%;
-
     height: 52px;
-
     display: flex;
-
     align-items: center;
-
     justify-content: center;
-
     gap: 12px;
-
-    background:
-        rgba(25, 25, 25, 0.96);
-
+    background: rgba(25,25,25,0.96);
     z-index: 1000;
-
 }
-
 
 #teacherMenu label {
-
     color: white;
-
     font-size: 14px;
-
     font-weight: 600;
-
 }
-
 
 #teacherMenu select,
 #teacherMenu button {
-
     height: 32px;
-
     border: 1px solid #666;
-
     border-radius: 5px;
-
     background: #222;
-
     color: white;
-
     padding: 0 10px;
-
     font-size: 14px;
-
     cursor: pointer;
-
 }
-
-
-#teacherMenu button:hover,
-#teacherMenu select:hover {
-
-    background: #333;
-
-}
-
 
 :fullscreen #teacherMenu {
-
     display: none;
-
-}
-
-
-:-webkit-full-screen #teacherMenu {
-
-    display: none;
-
 }
 
 </style>
-
 </head>
-
 
 <body>
 
-
 <div id="teacherMenu">
 
-    <label for="fontSize">
-        Font
-    </label>
+    <label for="fontSize">Font</label>
 
     <select id="fontSize">
-
-        <option value="48">
-            48 px
-        </option>
-
-        <option value="64">
-            64 px
-        </option>
-
-        <option value="80">
-            80 px
-        </option>
-
-        <option value="96" selected>
-            96 px
-        </option>
-
-        <option value="120">
-            120 px
-        </option>
-
-        <option value="144">
-            144 px
-        </option>
-
+        <option value="48">48 px</option>
+        <option value="64">64 px</option>
+        <option value="80">80 px</option>
+        <option value="96" selected>96 px</option>
+        <option value="120">120 px</option>
+        <option value="144">144 px</option>
     </select>
 
-
-    <label for="language">
-        Language
-    </label>
+    <label for="language">Language</label>
 
     <select id="language">
-
-        <option value="en">
-            English
-        </option>
-
-        <option value="th" selected>
-            Thai
-        </option>
-
+        <option value="en">English</option>
+        <option value="th" selected>Thai</option>
     </select>
-
 
     <button id="fullscreenButton">
         Fullscreen
@@ -240,12 +111,9 @@ body {
 
 </div>
 
-
 <div id="caption"></div>
 
-
 <script>
-
 
 /* ============================================================
    ELEMENTS
@@ -270,58 +138,35 @@ const fullscreenButton =
 
 const CLEAR_DELAY = 2000;
 
-
-/*
- * This is your WORKING Cloudflare Worker.
- * DO NOT CHANGE IT.
- */
+const TRANSLATION_DELAY = 700;
 
 const TRANSLATION_SERVER =
     "https://carlton-classroom.carltonescandor.workers.dev/";
 
 
-/*
- * How frequently we allow a new translation.
- *
- * 350 ms gives a much more real-time feeling
- * without sending a request for every single
- * recognition event.
- */
-
-const TRANSLATION_DELAY = 350;
-
-
-let clearTimer = null;
+let currentLanguage = "th";
 
 let recognition = null;
 
 let restarting = false;
 
-let currentLanguage = "th";
-
-
-/*
- * Used to prevent an older translation from
- * overwriting newer speech.
- */
-
-let translationNumber = 0;
-
-
-/*
- * Prevents multiple translation timers
- * from running simultaneously.
- */
+let clearTimer = null;
 
 let translationTimer = null;
 
+let translationController = null;
+
+let translationID = 0;
+
 
 /*
- * The newest English speech recognized
- * by Chrome.
+ * Text accumulated during the current
+ * speech-recognition session.
  */
 
-let latestSpeech = "";
+let confirmedText = "";
+
+let currentInterimText = "";
 
 
 /* ============================================================
@@ -350,17 +195,19 @@ language.addEventListener(
         currentLanguage =
             language.value;
 
-
-        translationNumber++;
-
-
         clearTimeout(
             translationTimer
         );
 
+        if (translationController) {
 
-        latestSpeech = "";
+            translationController.abort();
 
+        }
+
+        confirmedText = "";
+
+        currentInterimText = "";
 
         clearCaption();
 
@@ -378,25 +225,18 @@ fullscreenButton.addEventListener(
 
         try {
 
-            if (
-                !document.fullscreenElement
-            ) {
+            if (!document.fullscreenElement) {
 
                 await document.documentElement
                     .requestFullscreen();
 
-            }
+            } else {
 
-            else {
-
-                await document
-                    .exitFullscreen();
+                await document.exitFullscreen();
 
             }
 
-        }
-
-        catch (error) {
+        } catch (error) {
 
             console.error(
                 "Fullscreen error:",
@@ -424,15 +264,12 @@ function showCaption(text) {
 
     }
 
-
     clearTimeout(
         clearTimer
     );
 
-
     caption.textContent =
         text.trim();
-
 
     caption.classList.add(
         "visible"
@@ -451,8 +288,7 @@ function clearCaption() {
         clearTimer
     );
 
-    caption.textContent =
-        "";
+    caption.textContent = "";
 
     caption.classList.remove(
         "visible"
@@ -468,30 +304,57 @@ function clearCaption() {
 function cleanText(text) {
 
     return text
-
-        .replace(
-            /\s+([,.!?;:])/g,
-            "$1"
-        )
-
-        .replace(
-            /\s+/g,
-            " "
-        )
-
+        .replace(/\s+/g, " ")
+        .replace(/\s+([,.!?;:])/g, "$1")
         .trim();
 
 }
 
 
 /* ============================================================
-   TRANSLATE ENGLISH → THAI
+   GET CURRENT SPEECH
    ============================================================ */
 
-async function translateToThai(
-    text,
-    requestNumber
-) {
+function getCurrentSpeech() {
+
+    return cleanText(
+        confirmedText +
+        " " +
+        currentInterimText
+    );
+
+}
+
+
+/* ============================================================
+   TRANSLATE TO THAI
+   ============================================================ */
+
+async function translateToThai(text) {
+
+    if (!text) {
+        return null;
+    }
+
+
+    /*
+     * Cancel the previous translation request.
+     */
+
+    if (translationController) {
+
+        translationController.abort();
+
+    }
+
+
+    translationController =
+        new AbortController();
+
+
+    const thisID =
+        ++translationID;
+
 
     try {
 
@@ -502,7 +365,14 @@ async function translateToThai(
 
 
         const response =
-            await fetch(url);
+            await fetch(
+                url,
+                {
+                    method: "GET",
+                    signal:
+                        translationController.signal
+                }
+            );
 
 
         if (!response.ok) {
@@ -519,23 +389,16 @@ async function translateToThai(
             await response.json();
 
 
-        console.log(
-            "Thai:",
-            data.translation
-        );
-
-
         /*
-         * Ignore the result if newer speech
-         * has already been recognized.
+         * Ignore an old translation if
+         * newer speech has already arrived.
          */
 
         if (
-            requestNumber !==
-            translationNumber
+            thisID !== translationID
         ) {
 
-            return;
+            return null;
 
         }
 
@@ -544,29 +407,34 @@ async function translateToThai(
             currentLanguage !== "th"
         ) {
 
-            return;
+            return null;
 
         }
 
 
-        if (
-            data.translation
-        ) {
-
-            showCaption(
-                data.translation
-            );
-
-        }
+        return data.translation || null;
 
     }
 
     catch (error) {
 
-        console.error(
-            "Thai translation error:",
-            error
-        );
+        /*
+         * Abort errors are normal because
+         * we intentionally cancel old requests.
+         */
+
+        if (
+            error.name !== "AbortError"
+        ) {
+
+            console.error(
+                "Thai translation error:",
+                error
+            );
+
+        }
+
+        return null;
 
     }
 
@@ -574,10 +442,19 @@ async function translateToThai(
 
 
 /* ============================================================
-   SCHEDULE THAI TRANSLATION
+   SCHEDULE TRANSLATION
    ============================================================ */
 
-function scheduleThaiTranslation() {
+function scheduleTranslation() {
+
+    if (
+        currentLanguage !== "th"
+    ) {
+
+        return;
+
+    }
+
 
     clearTimeout(
         translationTimer
@@ -588,28 +465,33 @@ function scheduleThaiTranslation() {
         setTimeout(
             async function () {
 
-                const text =
-                    latestSpeech;
+                const speech =
+                    getCurrentSpeech();
 
 
-                if (
-                    !text ||
-                    currentLanguage !== "th"
-                ) {
+                if (!speech) {
 
                     return;
 
                 }
 
 
-                const requestNumber =
-                    ++translationNumber;
+                const thai =
+                    await translateToThai(
+                        speech
+                    );
 
 
-                await translateToThai(
-                    text,
-                    requestNumber
-                );
+                if (
+                    thai &&
+                    currentLanguage === "th"
+                ) {
+
+                    showCaption(
+                        thai
+                    );
+
+                }
 
             },
             TRANSLATION_DELAY
@@ -627,17 +509,13 @@ const SpeechRecognition =
     window.webkitSpeechRecognition;
 
 
-if (
-    !SpeechRecognition
-) {
+if (!SpeechRecognition) {
 
     alert(
         "Speech recognition is not supported. Please use Google Chrome."
     );
 
-}
-
-else {
+} else {
 
 
     function startRecognition() {
@@ -650,16 +528,6 @@ else {
             true;
 
 
-        /*
-         * IMPORTANT:
-         *
-         * TRUE means Chrome gives us
-         * unfinished/interim speech.
-         *
-         * This is what makes the system
-         * much closer to real time.
-         */
-
         recognition.interimResults =
             true;
 
@@ -669,10 +537,10 @@ else {
 
 
         /*
-         * You speak English.
+         * IMPORTANT:
          *
-         * Therefore Chrome must listen
-         * for English.
+         * You speak English.
+         * Chrome listens in English.
          */
 
         recognition.lang =
@@ -680,19 +548,11 @@ else {
 
 
         /* ====================================================
-           SPEECH RESULT
+           RESULT
            ==================================================== */
 
         recognition.onresult =
             function(event) {
-
-
-                let interimText =
-                    "";
-
-                let finalText =
-                    "";
-
 
                 for (
                     let i =
@@ -704,7 +564,6 @@ else {
                     i++
                 ) {
 
-
                     const result =
                         event.results[i];
 
@@ -713,18 +572,38 @@ else {
                         result[0].transcript;
 
 
+                    /* =========================================
+                       FINAL SPEECH
+                       ========================================= */
+
                     if (
                         result.isFinal
                     ) {
 
-                        finalText +=
+                        confirmedText +=
+                            " " +
                             transcript;
+
+
+                        confirmedText =
+                            cleanText(
+                                confirmedText
+                            );
+
+
+                        currentInterimText =
+                            "";
+
 
                     }
 
+                    /* =========================================
+                       INTERIM SPEECH
+                       ========================================= */
+
                     else {
 
-                        interimText +=
+                        currentInterimText =
                             transcript;
 
                     }
@@ -732,88 +611,49 @@ else {
                 }
 
 
-                /* =================================================
-                   ENGLISH MODE
-                   ================================================= */
-
-                if (
-                    currentLanguage === "en"
-                ) {
+                const speech =
+                    getCurrentSpeech();
 
 
-                    const english =
-                        cleanText(
-                            interimText ||
-                            finalText
-                        );
-
-
-                    if (
-                        english
-                    ) {
-
-                        showCaption(
-                            english
-                        );
-
-                    }
-
+                if (!speech) {
 
                     return;
 
                 }
 
 
-                /* =================================================
-                   THAI MODE
-                   ================================================= */
+                /* =============================================
+                   ENGLISH
+                   ============================================= */
+
+                if (
+                    currentLanguage === "en"
+                ) {
+
+                    showCaption(
+                        speech
+                    );
+
+                    return;
+
+                }
+
+
+                /* =============================================
+                   THAI
+                   ============================================= */
 
                 if (
                     currentLanguage === "th"
                 ) {
 
-
                     /*
-                     * Combine the latest recognized
-                     * speech.
+                     * English stays completely hidden.
                      *
-                     * Chrome's interim result is
-                     * normally the newest unfinished
-                     * portion.
+                     * We translate the accumulated speech.
                      */
 
-                    const speech =
-                        cleanText(
-                            interimText ||
-                            finalText
-                        );
-
-
-                    if (
-                        !speech
-                    ) {
-
-                        return;
-
-                    }
-
-
-                    /*
-                     * Save the newest speech.
-                     */
-
-                    latestSpeech =
-                        speech;
-
-
-                    /*
-                     * Do NOT display English.
-                     *
-                     * Instead, schedule Thai
-                     * translation immediately.
-                     */
-
-                    scheduleThaiTranslation();
+                    scheduleTranslation();
 
                 }
 
@@ -842,16 +682,14 @@ else {
             function () {
 
                 /*
-                 * Give the final phrase one last
-                 * translation attempt.
+                 * Translate the latest complete phrase.
                  */
 
                 if (
-                    currentLanguage === "th" &&
-                    latestSpeech
+                    currentLanguage === "th"
                 ) {
 
-                    scheduleThaiTranslation();
+                    scheduleTranslation();
 
                 }
 
@@ -867,6 +705,15 @@ else {
 
                             clearCaption();
 
+                            /*
+                             * Start a fresh sentence
+                             * after the speaker stops.
+                             */
+
+                            confirmedText = "";
+
+                            currentInterimText = "";
+
                         },
                         CLEAR_DELAY
                     );
@@ -875,7 +722,7 @@ else {
 
 
         /* ====================================================
-           RECOGNITION END
+           RECOGNITION ENDED
            ==================================================== */
 
         recognition.onend =
@@ -900,9 +747,7 @@ else {
 
                                 startRecognition();
 
-                            }
-
-                            catch (error) {
+                            } catch (error) {
 
                                 console.error(
                                     error
@@ -920,7 +765,7 @@ else {
 
 
         /* ====================================================
-           ERRORS
+           ERROR
            ==================================================== */
 
         recognition.onerror =
@@ -956,7 +801,7 @@ else {
 
 
     /* ============================================================
-       START WHEN PAGE LOADS
+       START
        ============================================================ */
 
     window.addEventListener(
@@ -973,5 +818,4 @@ else {
 </script>
 
 </body>
-
 </html>
