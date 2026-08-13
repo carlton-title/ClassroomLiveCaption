@@ -23,14 +23,18 @@ html, body {
     transform: translate(-50%, -50%);
     width: 90vw;
     max-width: 1500px;
+    max-height: 4em;
+    overflow: hidden;
     text-align: center;
     color: white;
     font-size: 96px;
     font-weight: 600;
     line-height: 1.15;
     overflow-wrap: break-word;
+    word-break: normal;
     opacity: 0;
-    transition: opacity .15s ease;
+    transition: opacity 0.15s ease;
+    user-select: none;
 }
 
 #caption.visible {
@@ -47,13 +51,14 @@ html, body {
     align-items: center;
     justify-content: center;
     gap: 12px;
-    background: rgba(25,25,25,.96);
+    background: rgba(25, 25, 25, 0.96);
     z-index: 1000;
 }
 
 #teacherMenu label {
     color: white;
     font-size: 14px;
+    font-weight: 600;
 }
 
 #teacherMenu select,
@@ -65,6 +70,7 @@ html, body {
     color: white;
     padding: 0 10px;
     font-size: 14px;
+    cursor: pointer;
 }
 
 :fullscreen #teacherMenu {
@@ -77,7 +83,7 @@ html, body {
 
 <div id="teacherMenu">
 
-    <label>Font</label>
+    <label for="fontSize">Font</label>
 
     <select id="fontSize">
         <option value="48">48 px</option>
@@ -88,7 +94,7 @@ html, body {
         <option value="144">144 px</option>
     </select>
 
-    <label>Language</label>
+    <label for="language">Language</label>
 
     <select id="language">
         <option value="en">English</option>
@@ -124,14 +130,14 @@ let translationNumber = 0;
 
 /* FONT SIZE */
 
-fontSize.addEventListener("change", () => {
+fontSize.addEventListener("change", function () {
     caption.style.fontSize = fontSize.value + "px";
 });
 
 
 /* LANGUAGE */
 
-language.addEventListener("change", () => {
+language.addEventListener("change", function () {
 
     currentLanguage = language.value;
 
@@ -144,7 +150,7 @@ language.addEventListener("change", () => {
 
 /* FULLSCREEN */
 
-fullscreenButton.addEventListener("click", async () => {
+fullscreenButton.addEventListener("click", async function () {
 
     try {
 
@@ -155,7 +161,7 @@ fullscreenButton.addEventListener("click", async () => {
         }
 
     } catch (error) {
-        console.error(error);
+        console.error("Fullscreen error:", error);
     }
 
 });
@@ -165,7 +171,9 @@ fullscreenButton.addEventListener("click", async () => {
 
 function showCaption(text) {
 
-    if (!text || !text.trim()) return;
+    if (!text || !text.trim()) {
+        return;
+    }
 
     clearTimeout(clearTimer);
 
@@ -199,38 +207,35 @@ function cleanText(text) {
 }
 
 
-/* TRANSLATE ENGLISH → THAI */
+/* ENGLISH → THAI USING CLOUDFLARE GET */
 
 async function translateToThai(text) {
 
     try {
 
-        const response = await fetch(
-            TRANSLATION_SERVER,
-            {
-                method: "POST",
+        const url =
+            TRANSLATION_SERVER +
+            "?text=" +
+            encodeURIComponent(text);
 
-                headers: {
-                    "Content-Type": "application/json"
-                },
+        console.log("Sending:", text);
 
-                body: JSON.stringify({
-                    text: text
-                })
-            }
-        );
-
+        const response =
+            await fetch(url);
 
         if (!response.ok) {
+
             throw new Error(
-                "Translation HTTP " + response.status
+                "Translation HTTP " +
+                response.status
             );
+
         }
 
+        const data =
+            await response.json();
 
-        const data = await response.json();
-
-        console.log("Thai translation:", data);
+        console.log("Translation:", data);
 
         return data.translation || null;
 
@@ -244,6 +249,7 @@ async function translateToThai(text) {
         );
 
         return null;
+
     }
 
 }
@@ -267,7 +273,8 @@ if (!SpeechRecognition) {
 
     function startRecognition() {
 
-        recognition = new SpeechRecognition();
+        recognition =
+            new SpeechRecognition();
 
         recognition.continuous = true;
 
@@ -276,149 +283,170 @@ if (!SpeechRecognition) {
         recognition.maxAlternatives = 1;
 
         /*
-         * IMPORTANT:
-         * You speak English.
-         * Chrome therefore listens for English.
+         * YOU SPEAK ENGLISH.
+         * Chrome listens in English.
          */
 
         recognition.lang = "en-US";
 
 
-        recognition.onresult = async function(event) {
+        recognition.onresult =
+            async function(event) {
 
-            let finalText = "";
-
-
-            for (
-                let i = event.resultIndex;
-                i < event.results.length;
-                i++
-            ) {
-
-                const result = event.results[i];
-
-                const transcript =
-                    result[0].transcript;
+                let finalText = "";
 
 
-                if (result.isFinal) {
+                for (
+                    let i = event.resultIndex;
+                    i < event.results.length;
+                    i++
+                ) {
 
-                    finalText += transcript;
+                    const result =
+                        event.results[i];
+
+                    const transcript =
+                        result[0].transcript;
+
+
+                    if (result.isFinal) {
+
+                        finalText += transcript;
+
+                    }
 
                 }
 
-            }
+
+                if (!finalText.trim()) {
+                    return;
+                }
 
 
-            if (!finalText.trim()) return;
+                const english =
+                    cleanText(finalText);
 
 
-            const english =
-                cleanText(finalText);
+                /* ==============================
+                   ENGLISH MODE
+                   ============================== */
 
+                if (currentLanguage === "en") {
 
-            /* ==============================
-               ENGLISH MODE
-               ============================== */
-
-            if (currentLanguage === "en") {
-
-                showCaption(english);
-
-            }
-
-
-            /* ==============================
-               THAI MODE
-               ============================== */
-
-            else if (currentLanguage === "th") {
-
-                const requestNumber =
-                    ++translationNumber;
-
-
-                /*
-                 * IMPORTANT:
-                 * DO NOT show English here.
-                 */
-
-                clearCaption();
-
-
-                const thai =
-                    await translateToThai(english);
-
-
-                /*
-                 * Only Thai is displayed.
-                 */
-
-                if (
-                    thai &&
-                    currentLanguage === "th" &&
-                    requestNumber === translationNumber
-                ) {
-
-                    showCaption(thai);
-
+                    showCaption(english);
 
                     clearTimeout(clearTimer);
 
+                    clearTimer =
+                        setTimeout(
+                            clearCaption,
+                            CLEAR_DELAY
+                        );
 
-                    clearTimer = setTimeout(
-                        clearCaption,
-                        CLEAR_DELAY
+                    return;
+                }
+
+
+                /* ==============================
+                   THAI MODE
+                   ============================== */
+
+                if (currentLanguage === "th") {
+
+                    const requestNumber =
+                        ++translationNumber;
+
+
+                    /*
+                     * DO NOT SHOW ENGLISH.
+                     */
+
+                    clearCaption();
+
+
+                    const thai =
+                        await translateToThai(
+                            english
+                        );
+
+
+                    /*
+                     * SHOW ONLY THAI.
+                     */
+
+                    if (
+                        thai &&
+                        currentLanguage === "th" &&
+                        requestNumber ===
+                            translationNumber
+                    ) {
+
+                        showCaption(thai);
+
+                        clearTimeout(clearTimer);
+
+                        clearTimer =
+                            setTimeout(
+                                clearCaption,
+                                CLEAR_DELAY
+                            );
+
+                    }
+
+                }
+
+            };
+
+
+        recognition.onerror =
+            function(event) {
+
+                console.log(
+                    "Speech recognition:",
+                    event.error
+                );
+
+            };
+
+
+        recognition.onend =
+            function() {
+
+                if (!restarting) {
+
+                    restarting = true;
+
+                    setTimeout(
+                        function() {
+
+                            restarting = false;
+
+                            try {
+                                startRecognition();
+                            }
+                            catch (error) {
+                                console.error(error);
+                            }
+
+                        },
+                        300
                     );
 
                 }
 
-            }
-
-        };
-
-
-        recognition.onerror = function(event) {
-
-            console.log(
-                "Speech recognition:",
-                event.error
-            );
-
-        };
-
-
-        recognition.onend = function() {
-
-            if (!restarting) {
-
-                restarting = true;
-
-                setTimeout(() => {
-
-                    restarting = false;
-
-                    try {
-                        startRecognition();
-                    } catch (error) {
-                        console.error(error);
-                    }
-
-                }, 300);
-
-            }
-
-        };
+            };
 
 
         try {
 
             recognition.start();
 
-        } catch (error) {
+        }
+
+        catch (error) {
 
             console.log(
-                "Recognition restart."
+                "Recognition restarting..."
             );
 
         }
