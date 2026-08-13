@@ -6,7 +6,6 @@
 <title>Classroom Live Transcription</title>
 
 <style>
-
 html, body {
     margin: 0;
     padding: 0;
@@ -74,7 +73,6 @@ html, body {
 :fullscreen #teacherMenu {
     display: none;
 }
-
 </style>
 </head>
 
@@ -140,6 +138,15 @@ let translationController = null;
 let translationID = 0;
 
 
+/*
+ * This holds ONLY the current utterance.
+ *
+ * It is cleared when Chrome tells us
+ * that the speaker has stopped speaking.
+ */
+let utteranceText = "";
+
+
 /* ============================================================
    FONT
    ============================================================ */
@@ -165,6 +172,8 @@ language.addEventListener(
 
         currentLanguage =
             language.value;
+
+        utteranceText = "";
 
         translationID++;
 
@@ -210,7 +219,7 @@ fullscreenButton.addEventListener(
 
 
 /* ============================================================
-   DISPLAY ONE SPEECH UNIT
+   DISPLAY
    ============================================================ */
 
 function showSpeechUnit(text) {
@@ -221,37 +230,25 @@ function showSpeechUnit(text) {
 
     clearTimeout(displayTimer);
 
-    /*
-     * Remove the previous speech unit.
-     */
-    caption.textContent = "";
-
-    caption.classList.remove("visible");
-
-    /*
-     * Display the new speech unit ONCE.
-     * No animation.
-     * No requestAnimationFrame.
-     * No blinking.
-     */
-    caption.textContent = text.trim();
+    caption.textContent =
+        text.trim();
 
     caption.classList.add("visible");
 
     /*
-     * Remove this speech unit automatically.
+     * The display turns OFF automatically.
+     *
+     * This timer applies to the DISPLAY,
+     * not to speech detection.
      */
     displayTimer =
         setTimeout(
             clearCaption,
             DISPLAY_TIME
         );
+
 }
 
-
-/* ============================================================
-   CLEAR
-   ============================================================ */
 
 function clearCaption() {
 
@@ -265,24 +262,21 @@ function clearCaption() {
 
 
 /* ============================================================
-   CLEAN
+   CLEAN TEXT
    ============================================================ */
 
 function cleanText(text) {
 
     return text
         .replace(/\s+/g, " ")
-        .replace(
-            /\s+([,.!?;:])/g,
-            "$1"
-        )
+        .replace(/\s+([,.!?;:])/g, "$1")
         .trim();
 
 }
 
 
 /* ============================================================
-   BREAK LONG FINAL RESULT INTO SMALL UNITS
+   SPLIT LONG UTTERANCE
    ============================================================ */
 
 function splitSpeechUnit(text) {
@@ -313,20 +307,21 @@ function splitSpeechUnit(text) {
                 words.join(" ")
             );
 
-            continue;
-        }
+        } else {
 
-        for (
-            let i = 0;
-            i < words.length;
-            i += 4
-        ) {
+            for (
+                let i = 0;
+                i < words.length;
+                i += 4
+            ) {
 
-            units.push(
-                words
-                    .slice(i, i + 4)
-                    .join(" ")
-            );
+                units.push(
+                    words
+                        .slice(i, i + 4)
+                        .join(" ")
+                );
+
+            }
 
         }
 
@@ -337,7 +332,7 @@ function splitSpeechUnit(text) {
 
 
 /* ============================================================
-   TRANSLATE ENGLISH → THAI
+   TRANSLATION
    ============================================================ */
 
 async function translateToThai(text) {
@@ -422,48 +417,46 @@ async function translateToThai(text) {
 
 
 /* ============================================================
-   PROCESS ONE FINAL SPEECH UNIT
+   PROCESS COMPLETED UTTERANCE
    ============================================================ */
 
-async function processSpeechUnit(text) {
+async function processUtterance(text) {
 
-    text = cleanText(text);
+    text =
+        cleanText(text);
 
     if (!text) {
         return;
     }
 
-    /*
-     * ENGLISH
-     */
+    const units =
+        splitSpeechUnit(text);
 
-    if (
-        currentLanguage === "en"
-    ) {
-
-        showSpeechUnit(text);
-
-        return;
-    }
-
-
-    /*
-     * THAI
-     */
-
-    if (
-        currentLanguage === "th"
-    ) {
-
-        const thai =
-            await translateToThai(text);
+    for (const unit of units) {
 
         if (
-            thai &&
+            currentLanguage === "en"
+        ) {
+
+            showSpeechUnit(unit);
+
+        }
+
+        else if (
             currentLanguage === "th"
         ) {
 
-            showSpeechUnit(thai);
+            const thai =
+                await translateToThai(unit);
+
+            if (
+                thai &&
+                currentLanguage === "th"
+            ) {
+
+                showSpeechUnit(thai);
+
+            }
 
         }
 
@@ -489,6 +482,7 @@ if (!SpeechRecognition) {
 
 } else {
 
+
     function startRecognition() {
 
         recognition =
@@ -498,8 +492,9 @@ if (!SpeechRecognition) {
             true;
 
         /*
-         * Interim recognition is enabled,
-         * but interim text is NEVER displayed.
+         * We need final results.
+         *
+         * Interim results are NOT displayed.
          */
         recognition.interimResults =
             true;
@@ -507,19 +502,29 @@ if (!SpeechRecognition) {
         recognition.maxAlternatives =
             1;
 
-        /*
-         * Teacher speaks English.
-         */
         recognition.lang =
             "en-US";
 
 
         /* ====================================================
-           FINAL SPEECH RESULT
+           RESULT
            ==================================================== */
 
         recognition.onresult =
             async function(event) {
+
+                /*
+                 * IMPORTANT:
+                 *
+                 * Chrome can split one sentence
+                 * across several FINAL results.
+                 *
+                 * We append each final piece to
+                 * the CURRENT utterance.
+                 */
+
+                let newFinalText = "";
+
 
                 for (
                     let i =
@@ -534,61 +539,85 @@ if (!SpeechRecognition) {
                     const result =
                         event.results[i];
 
-                    /*
-                     * Ignore interim results.
-                     *
-                     * This prevents the same words
-                     * from blinking repeatedly.
-                     */
 
                     if (
-                        !result.isFinal
+                        result.isFinal
                     ) {
 
-                        continue;
-                    }
-
-                    const transcript =
-                        cleanText(
-                            result[0].transcript
-                        );
-
-                    if (!transcript) {
-                        continue;
-                    }
-
-
-                    /*
-                     * Divide the finalized speech
-                     * into independent display units.
-                     */
-
-                    const units =
-                        splitSpeechUnit(
-                            transcript
-                        );
-
-
-                    for (
-                        const unit of units
-                    ) {
-
-                        /*
-                         * Immediately remove whatever
-                         * was previously displayed.
-                         */
-
-                        clearCaption();
-
-                        /*
-                         * Display only this unit.
-                         */
-
-                        await processSpeechUnit(
-                            unit
-                        );
+                        newFinalText +=
+                            " " +
+                            result[0].transcript;
 
                     }
+
+                }
+
+
+                newFinalText =
+                    cleanText(
+                        newFinalText
+                    );
+
+
+                if (!newFinalText) {
+                    return;
+                }
+
+
+                /*
+                 * Add it to the current utterance.
+                 */
+                utteranceText =
+                    cleanText(
+                        utteranceText +
+                        " " +
+                        newFinalText
+                    );
+
+
+                /*
+                 * DO NOT display it yet.
+                 *
+                 * Chrome may still be building
+                 * the same sentence.
+                 */
+
+            };
+
+
+        /* ====================================================
+           SPEECH END
+           ==================================================== */
+
+        recognition.onspeechend =
+            async function() {
+
+                /*
+                 * NOW the speaker has finished
+                 * this speech unit.
+                 *
+                 * Process the complete phrase.
+                 */
+
+                const completedUtterance =
+                    utteranceText;
+
+
+                /*
+                 * Immediately reset for the
+                 * NEXT sentence.
+                 */
+
+                utteranceText = "";
+
+
+                if (
+                    completedUtterance
+                ) {
+
+                    await processUtterance(
+                        completedUtterance
+                    );
 
                 }
 
