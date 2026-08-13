@@ -136,11 +136,14 @@ const fullscreenButton =
    SETTINGS
    ============================================================ */
 
-const CLEAR_DELAY = 2000;
+const CLEAR_DELAY = 800;
 
-const TRANSLATION_DELAY = 700;
+const ROLLING_WORD_COUNT = 4;
 
-const TRANSLATION_SERVER =
+const LOCAL_TRANSLATION_SERVER =
+    "http://127.0.0.1:8000/translate";
+
+const CLOUD_TRANSLATION_SERVER =
     "https://carlton-classroom.carltonescandor.workers.dev/";
 
 
@@ -151,8 +154,6 @@ let recognition = null;
 let restarting = false;
 
 let clearTimer = null;
-
-let translationTimer = null;
 
 let translationController = null;
 
@@ -194,10 +195,6 @@ language.addEventListener(
 
         currentLanguage =
             language.value;
-
-        clearTimeout(
-            translationTimer
-        );
 
         if (translationController) {
 
@@ -312,16 +309,16 @@ function cleanText(text) {
 
 
 /* ============================================================
-   GET CURRENT SPEECH
+   ROLLING WINDOW
    ============================================================ */
 
-function getCurrentSpeech() {
+function getRollingSpeech() {
 
-    return cleanText(
-        confirmedText +
-        " " +
-        currentInterimText
-    );
+    return getCurrentSpeech()
+        .split(" ")
+        .filter(Boolean)
+        .slice(-ROLLING_WORD_COUNT)
+        .join(" ");
 
 }
 
@@ -330,173 +327,132 @@ function getCurrentSpeech() {
    TRANSLATE TO THAI
    ============================================================ */
 
+async function requestTranslation(server, text, signal) {
+
+    const response =
+        await fetch(
+            server +
+            "?text=" +
+            encodeURIComponent(text),
+            {
+                method: "GET",
+                signal
+            }
+        );
+
+    if (!response.ok) {
+        throw new Error(
+            "Translation HTTP " +
+            response.status
+        );
+    }
+
+    const data =
+        await response.json();
+
+    return data.translation ||
+        data.translatedText ||
+        null;
+}
+
+
 async function translateToThai(text) {
 
     if (!text) {
         return null;
     }
 
-
-    /*
-     * Cancel the previous translation request.
-     */
-
     if (translationController) {
-
         translationController.abort();
-
     }
-
 
     translationController =
         new AbortController();
 
-
     const thisID =
         ++translationID;
 
-
     try {
 
-        const url =
-            TRANSLATION_SERVER +
-            "?text=" +
-            encodeURIComponent(text);
+        let thai = null;
 
+        try {
+            thai =
+                await requestTranslation(
+                    LOCAL_TRANSLATION_SERVER,
+                    text,
+                    translationController.signal
+                );
+        } catch (localError) {
 
-        const response =
-            await fetch(
-                url,
-                {
-                    method: "GET",
-                    signal:
-                        translationController.signal
-                }
-            );
+            if (
+                localError.name ===
+                "AbortError"
+            ) {
+                throw localError;
+            }
 
-
-        if (!response.ok) {
-
-            throw new Error(
-                "Translation HTTP " +
-                response.status
-            );
-
+            thai =
+                await requestTranslation(
+                    CLOUD_TRANSLATION_SERVER,
+                    text,
+                    translationController.signal
+                );
         }
 
-
-        const data =
-            await response.json();
-
-
-        /*
-         * Ignore an old translation if
-         * newer speech has already arrived.
-         */
-
         if (
-            thisID !== translationID
-        ) {
-
-            return null;
-
-        }
-
-
-        if (
+            thisID !== translationID ||
             currentLanguage !== "th"
         ) {
-
             return null;
-
         }
 
+        return thai;
 
-        return data.translation || null;
-
-    }
-
-    catch (error) {
-
-        /*
-         * Abort errors are normal because
-         * we intentionally cancel old requests.
-         */
+    } catch (error) {
 
         if (
             error.name !== "AbortError"
         ) {
-
             console.error(
                 "Thai translation error:",
                 error
             );
-
         }
 
         return null;
-
     }
 
 }
 
 
 /* ============================================================
-   SCHEDULE TRANSLATION
+   RENDER CURRENT SPEECH
    ============================================================ */
 
-function scheduleTranslation() {
+async function renderCurrentSpeech() {
 
-    if (
-        currentLanguage !== "th"
-    ) {
+    const speech =
+        getRollingSpeech();
 
+    if (!speech) {
         return;
-
     }
 
+    if (currentLanguage === "en") {
+        showCaption(speech);
+        return;
+    }
 
-    clearTimeout(
-        translationTimer
-    );
+    const thai =
+        await translateToThai(speech);
 
-
-    translationTimer =
-        setTimeout(
-            async function () {
-
-                const speech =
-                    getCurrentSpeech();
-
-
-                if (!speech) {
-
-                    return;
-
-                }
-
-
-                const thai =
-                    await translateToThai(
-                        speech
-                    );
-
-
-                if (
-                    thai &&
-                    currentLanguage === "th"
-                ) {
-
-                    showCaption(
-                        thai
-                    );
-
-                }
-
-            },
-            TRANSLATION_DELAY
-        );
-
+    if (
+        thai &&
+        currentLanguage === "th"
+    ) {
+        showCaption(thai);
+    }
 }
 
 
@@ -611,51 +567,7 @@ if (!SpeechRecognition) {
                 }
 
 
-                const speech =
-                    getCurrentSpeech();
-
-
-                if (!speech) {
-
-                    return;
-
-                }
-
-
-                /* =============================================
-                   ENGLISH
-                   ============================================= */
-
-                if (
-                    currentLanguage === "en"
-                ) {
-
-                    showCaption(
-                        speech
-                    );
-
-                    return;
-
-                }
-
-
-                /* =============================================
-                   THAI
-                   ============================================= */
-
-                if (
-                    currentLanguage === "th"
-                ) {
-
-                    /*
-                     * English stays completely hidden.
-                     *
-                     * We translate the accumulated speech.
-                     */
-
-                    scheduleTranslation();
-
-                }
+                renderCurrentSpeech();
 
             };
 
@@ -681,18 +593,7 @@ if (!SpeechRecognition) {
         recognition.onspeechend =
             function () {
 
-                /*
-                 * Translate the latest complete phrase.
-                 */
-
-                if (
-                    currentLanguage === "th"
-                ) {
-
-                    scheduleTranslation();
-
-                }
-
+                renderCurrentSpeech();
 
                 clearTimeout(
                     clearTimer
