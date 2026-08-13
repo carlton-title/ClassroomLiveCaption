@@ -1,13 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Classroom Live Transcription</title>
 
 <style>
-
 html, body {
     margin: 0;
     padding: 0;
@@ -25,18 +23,14 @@ html, body {
     transform: translate(-50%, -50%);
     width: 90vw;
     max-width: 1500px;
-    max-height: 4em;
-    overflow: hidden;
     text-align: center;
     color: white;
     font-size: 96px;
     font-weight: 600;
     line-height: 1.15;
-    overflow-wrap: break-word;
-    word-break: normal;
     opacity: 0;
-    transition: opacity 0.1s ease;
-    pointer-events: none;
+    transition: opacity 0.08s ease;
+    overflow-wrap: break-word;
     user-select: none;
 }
 
@@ -54,7 +48,7 @@ html, body {
     align-items: center;
     justify-content: center;
     gap: 12px;
-    background: rgba(25,25,25,0.96);
+    background: rgba(25,25,25,.96);
     z-index: 1000;
 }
 
@@ -79,7 +73,6 @@ html, body {
 :fullscreen #teacherMenu {
     display: none;
 }
-
 </style>
 </head>
 
@@ -115,10 +108,6 @@ html, body {
 
 <script>
 
-/* ============================================================
-   ELEMENTS
-   ============================================================ */
-
 const caption =
     document.getElementById("caption");
 
@@ -132,14 +121,19 @@ const fullscreenButton =
     document.getElementById("fullscreenButton");
 
 
-/* ============================================================
-   SETTINGS
-   ============================================================ */
-
-const ROLLING_WORD_COUNT = 4;
-
 const CLOUD_TRANSLATION_SERVER =
     "https://carlton-classroom.carltonescandor.workers.dev/";
+
+
+/*
+ * Very short visual display time.
+ *
+ * This is NOT a silence timer.
+ * It is only how long a completed
+ * speech unit remains visible.
+ */
+const DISPLAY_TIME = 450;
+
 
 let currentLanguage = "th";
 
@@ -147,13 +141,11 @@ let recognition = null;
 
 let restarting = false;
 
+let displayTimer = null;
+
+let translationNumber = 0;
+
 let translationController = null;
-
-let translationID = 0;
-
-let confirmedText = "";
-
-let currentInterimText = "";
 
 
 /* ============================================================
@@ -182,16 +174,10 @@ language.addEventListener(
         currentLanguage =
             language.value;
 
-        confirmedText = "";
-
-        currentInterimText = "";
-
-        translationID++;
+        translationNumber++;
 
         if (translationController) {
-
             translationController.abort();
-
         }
 
         clearCaption();
@@ -235,7 +221,7 @@ fullscreenButton.addEventListener(
 
 
 /* ============================================================
-   CAPTION
+   DISPLAY
    ============================================================ */
 
 function showCaption(text) {
@@ -244,22 +230,55 @@ function showCaption(text) {
         return;
     }
 
-    caption.textContent =
-        text.trim();
+    /*
+     * ALWAYS clear whatever was previously
+     * displayed before showing new speech.
+     */
 
-    caption.classList.add(
-        "visible"
-    );
+    clearTimeout(displayTimer);
+
+    caption.textContent = "";
+
+    caption.classList.remove("visible");
+
+
+    /*
+     * Small delay lets the previous caption
+     * actually disappear before the new one.
+     */
+
+    requestAnimationFrame(function () {
+
+        caption.textContent =
+            text.trim();
+
+        caption.classList.add("visible");
+
+
+        /*
+         * Automatically remove this speech unit.
+         *
+         * It does NOT wait for silence.
+         */
+
+        displayTimer =
+            setTimeout(
+                clearCaption,
+                DISPLAY_TIME
+            );
+
+    });
+
 }
 
 
 function clearCaption() {
 
+    clearTimeout(displayTimer);
+
     caption.textContent = "";
 
-    caption.classList.remove(
-        "visible"
-    );
+    caption.classList.remove("visible");
 
 }
 
@@ -272,54 +291,14 @@ function cleanText(text) {
 
     return text
         .replace(/\s+/g, " ")
-        .replace(
-            /\s+([,.!?;:])/g,
-            "$1"
-        )
+        .replace(/\s+([,.!?;:])/g, "$1")
         .trim();
 
 }
 
 
 /* ============================================================
-   CURRENT SPEECH
-   ============================================================ */
-
-function getCurrentSpeech() {
-
-    return cleanText(
-        confirmedText +
-        " " +
-        currentInterimText
-    );
-
-}
-
-
-/* ============================================================
-   ROLLING 4-WORD WINDOW
-   ============================================================ */
-
-function getRollingSpeech() {
-
-    const speech =
-        getCurrentSpeech();
-
-    if (!speech) {
-        return "";
-    }
-
-    return speech
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(-ROLLING_WORD_COUNT)
-        .join(" ");
-
-}
-
-
-/* ============================================================
-   TRANSLATION
+   TRANSLATE ENGLISH → THAI
    ============================================================ */
 
 async function translateToThai(text) {
@@ -330,9 +309,7 @@ async function translateToThai(text) {
 
 
     if (translationController) {
-
         translationController.abort();
-
     }
 
 
@@ -340,12 +317,8 @@ async function translateToThai(text) {
         new AbortController();
 
 
-    const controller =
-        translationController;
-
-
     const requestID =
-        ++translationID;
+        ++translationNumber;
 
 
     try {
@@ -362,7 +335,7 @@ async function translateToThai(text) {
                 {
                     method: "GET",
                     signal:
-                        controller.signal
+                        translationController.signal
                 }
             );
 
@@ -381,8 +354,12 @@ async function translateToThai(text) {
             await response.json();
 
 
+        /*
+         * Ignore an old translation.
+         */
+
         if (
-            requestID !== translationID ||
+            requestID !== translationNumber ||
             currentLanguage !== "th"
         ) {
 
@@ -402,8 +379,7 @@ async function translateToThai(text) {
     catch (error) {
 
         if (
-            error.name !==
-            "AbortError"
+            error.name !== "AbortError"
         ) {
 
             console.error(
@@ -414,71 +390,6 @@ async function translateToThai(text) {
         }
 
         return null;
-
-    }
-
-}
-
-
-/* ============================================================
-   RENDER
-   ============================================================ */
-
-function renderCurrentSpeech() {
-
-    const rolling =
-        getRollingSpeech();
-
-
-    if (!rolling) {
-        return;
-    }
-
-
-    /* ENGLISH */
-
-    if (
-        currentLanguage === "en"
-    ) {
-
-        showCaption(
-            rolling
-        );
-
-        return;
-
-    }
-
-
-    /* THAI */
-
-    if (
-        currentLanguage === "th"
-    ) {
-
-        const textToTranslate =
-            rolling;
-
-
-        translateToThai(
-            textToTranslate
-        )
-        .then(
-            function(thai) {
-
-                if (
-                    thai &&
-                    currentLanguage === "th"
-                ) {
-
-                    showCaption(
-                        thai
-                    );
-
-                }
-
-            }
-        );
 
     }
 
@@ -513,6 +424,11 @@ if (!SpeechRecognition) {
             true;
 
 
+        /*
+         * We need interim results so speech
+         * can be recognized while speaking.
+         */
+
         recognition.interimResults =
             true;
 
@@ -520,6 +436,10 @@ if (!SpeechRecognition) {
         recognition.maxAlternatives =
             1;
 
+
+        /*
+         * SPEAKER SPEAKS ENGLISH.
+         */
 
         recognition.lang =
             "en-US";
@@ -530,7 +450,17 @@ if (!SpeechRecognition) {
            ==================================================== */
 
         recognition.onresult =
-            function(event) {
+            async function(event) {
+
+
+                /*
+                 * We ONLY process the newest
+                 * speech result.
+                 *
+                 * We do NOT accumulate old text.
+                 */
+
+                let latestText = "";
 
 
                 for (
@@ -543,81 +473,107 @@ if (!SpeechRecognition) {
                     i++
                 ) {
 
-
                     const result =
                         event.results[i];
 
 
-                    const transcript =
+                    latestText +=
+                        " " +
                         result[0].transcript;
+
+                }
+
+
+                latestText =
+                    cleanText(
+                        latestText
+                    );
+
+
+                if (!latestText) {
+                    return;
+                }
+
+
+                /* =============================================
+                   ENGLISH
+                   ============================================= */
+
+                if (
+                    currentLanguage === "en"
+                ) {
+
+                    /*
+                     * Only the current speech unit.
+                     */
+
+                    showCaption(
+                        latestText
+                    );
+
+                    return;
+
+                }
+
+
+                /* =============================================
+                   THAI
+                   ============================================= */
+
+                if (
+                    currentLanguage === "th"
+                ) {
+
+                    /*
+                     * English is NEVER displayed
+                     * while Thai mode is selected.
+                     */
+
+                    const thai =
+                        await translateToThai(
+                            latestText
+                        );
 
 
                     if (
-                        result.isFinal
+                        thai &&
+                        currentLanguage === "th"
                     ) {
 
-                        confirmedText +=
-                            " " +
-                            transcript;
-
-
-                        confirmedText =
-                            cleanText(
-                                confirmedText
-                            );
-
-
-                        currentInterimText =
-                            "";
-
-                    }
-
-                    else {
-
-                        currentInterimText =
-                            transcript;
+                        showCaption(
+                            thai
+                        );
 
                     }
 
                 }
 
-
-                renderCurrentSpeech();
-
             };
 
 
         /* ====================================================
-           SPEECH END
+           ERROR
            ==================================================== */
 
-        recognition.onspeechend =
-            function() {
+        recognition.onerror =
+            function(event) {
 
-                /*
-                 * Do NOT wait two seconds.
-                 *
-                 * The current rolling window
-                 * is simply replaced by the
-                 * next speech.
-                 */
-
-                currentInterimText =
-                    "";
+                console.log(
+                    "Speech recognition:",
+                    event.error
+                );
 
             };
 
 
         /* ====================================================
-           RECOGNITION END
+           END
            ==================================================== */
 
         recognition.onend =
             function() {
 
-                if (
-                    !restarting
-                ) {
+                if (!restarting) {
 
                     restarting =
                         true;
@@ -652,21 +608,6 @@ if (!SpeechRecognition) {
 
 
         /* ====================================================
-           ERROR
-           ==================================================== */
-
-        recognition.onerror =
-            function(event) {
-
-                console.log(
-                    "Speech recognition:",
-                    event.error
-                );
-
-            };
-
-
-        /* ====================================================
            START
            ==================================================== */
 
@@ -689,7 +630,7 @@ if (!SpeechRecognition) {
 
     window.addEventListener(
         "load",
-        function() {
+        function () {
 
             startRecognition();
 
