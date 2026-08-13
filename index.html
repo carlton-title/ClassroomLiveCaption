@@ -1,105 +1,238 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Classroom Live Caption</title>
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>Classroom Live Transcription</title>
 
 <style>
-html, body {
+
+html,
+body {
+
     margin: 0;
     padding: 0;
+
     width: 100%;
     height: 100%;
+
     overflow: hidden;
+
     background: #000;
-    font-family: Arial, Helvetica, sans-serif;
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
 }
+
+
+/* ============================================================
+   CAPTION
+   ============================================================ */
 
 #caption {
+
     position: fixed;
+
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
+
+    transform:
+        translate(-50%, -50%);
+
     width: 90vw;
+
     max-width: 1500px;
+
     max-height: 4em;
+
     overflow: hidden;
+
     text-align: center;
+
     color: white;
+
     font-size: 96px;
+
     font-weight: 600;
+
     line-height: 1.15;
+
     overflow-wrap: break-word;
+
     word-break: normal;
+
     opacity: 0;
-    transition: opacity 0.15s ease;
+
+    transition:
+        opacity 0.1s ease;
+
+    pointer-events: none;
+
     user-select: none;
+
 }
+
 
 #caption.visible {
+
     opacity: 1;
+
 }
+
+
+/* ============================================================
+   TEACHER MENU
+   ============================================================ */
 
 #teacherMenu {
+
     position: fixed;
+
     top: 0;
     left: 0;
+
     width: 100%;
+
     height: 52px;
+
     display: flex;
+
     align-items: center;
+
     justify-content: center;
+
     gap: 12px;
-    background: rgba(25, 25, 25, 0.96);
+
+    background:
+        rgba(25, 25, 25, 0.96);
+
     z-index: 1000;
+
 }
 
+
 #teacherMenu label {
+
     color: white;
+
     font-size: 14px;
+
     font-weight: 600;
+
 }
+
 
 #teacherMenu select,
 #teacherMenu button {
+
     height: 32px;
+
     border: 1px solid #666;
+
     border-radius: 5px;
+
     background: #222;
+
     color: white;
+
     padding: 0 10px;
+
     font-size: 14px;
+
     cursor: pointer;
+
 }
 
-:fullscreen #teacherMenu {
-    display: none;
+
+#teacherMenu button:hover,
+#teacherMenu select:hover {
+
+    background: #333;
+
 }
+
+
+:fullscreen #teacherMenu {
+
+    display: none;
+
+}
+
+
+:-webkit-full-screen #teacherMenu {
+
+    display: none;
+
+}
+
 </style>
+
 </head>
+
 
 <body>
 
+
 <div id="teacherMenu">
 
-    <label for="fontSize">Font</label>
+    <label for="fontSize">
+        Font
+    </label>
 
     <select id="fontSize">
-        <option value="48">48 px</option>
-        <option value="64">64 px</option>
-        <option value="80">80 px</option>
-        <option value="96" selected>96 px</option>
-        <option value="120">120 px</option>
-        <option value="144">144 px</option>
+
+        <option value="48">
+            48 px
+        </option>
+
+        <option value="64">
+            64 px
+        </option>
+
+        <option value="80">
+            80 px
+        </option>
+
+        <option value="96" selected>
+            96 px
+        </option>
+
+        <option value="120">
+            120 px
+        </option>
+
+        <option value="144">
+            144 px
+        </option>
+
     </select>
 
-    <label for="language">Language</label>
+
+    <label for="language">
+        Language
+    </label>
 
     <select id="language">
-        <option value="en">English</option>
-        <option value="th" selected>Thai</option>
+
+        <option value="en">
+            English
+        </option>
+
+        <option value="th" selected>
+            Thai
+        </option>
+
     </select>
+
 
     <button id="fullscreenButton">
         Fullscreen
@@ -107,109 +240,258 @@ html, body {
 
 </div>
 
+
 <div id="caption"></div>
+
 
 <script>
 
-const caption = document.getElementById("caption");
-const fontSize = document.getElementById("fontSize");
-const language = document.getElementById("language");
-const fullscreenButton = document.getElementById("fullscreenButton");
+
+/* ============================================================
+   ELEMENTS
+   ============================================================ */
+
+const caption =
+    document.getElementById("caption");
+
+const fontSize =
+    document.getElementById("fontSize");
+
+const language =
+    document.getElementById("language");
+
+const fullscreenButton =
+    document.getElementById("fullscreenButton");
+
+
+/* ============================================================
+   SETTINGS
+   ============================================================ */
+
+const CLEAR_DELAY = 2000;
+
+
+/*
+ * This is your WORKING Cloudflare Worker.
+ * DO NOT CHANGE IT.
+ */
 
 const TRANSLATION_SERVER =
     "https://carlton-classroom.carltonescandor.workers.dev/";
 
-const CLEAR_DELAY = 2500;
+
+/*
+ * How frequently we allow a new translation.
+ *
+ * 350 ms gives a much more real-time feeling
+ * without sending a request for every single
+ * recognition event.
+ */
+
+const TRANSLATION_DELAY = 350;
+
+
+let clearTimer = null;
+
+let recognition = null;
+
+let restarting = false;
 
 let currentLanguage = "th";
-let clearTimer = null;
-let recognition = null;
-let restarting = false;
+
+
+/*
+ * Used to prevent an older translation from
+ * overwriting newer speech.
+ */
+
 let translationNumber = 0;
 
 
-/* FONT SIZE */
+/*
+ * Prevents multiple translation timers
+ * from running simultaneously.
+ */
 
-fontSize.addEventListener("change", function () {
-    caption.style.fontSize = fontSize.value + "px";
-});
-
-
-/* LANGUAGE */
-
-language.addEventListener("change", function () {
-
-    currentLanguage = language.value;
-
-    translationNumber++;
-
-    clearCaption();
-
-});
+let translationTimer = null;
 
 
-/* FULLSCREEN */
+/*
+ * The newest English speech recognized
+ * by Chrome.
+ */
 
-fullscreenButton.addEventListener("click", async function () {
+let latestSpeech = "";
 
-    try {
 
-        if (!document.fullscreenElement) {
-            await document.documentElement.requestFullscreen();
-        } else {
-            await document.exitFullscreen();
+/* ============================================================
+   FONT SIZE
+   ============================================================ */
+
+fontSize.addEventListener(
+    "change",
+    function () {
+
+        caption.style.fontSize =
+            fontSize.value + "px";
+
+    }
+);
+
+
+/* ============================================================
+   LANGUAGE
+   ============================================================ */
+
+language.addEventListener(
+    "change",
+    function () {
+
+        currentLanguage =
+            language.value;
+
+
+        translationNumber++;
+
+
+        clearTimeout(
+            translationTimer
+        );
+
+
+        latestSpeech = "";
+
+
+        clearCaption();
+
+    }
+);
+
+
+/* ============================================================
+   FULLSCREEN
+   ============================================================ */
+
+fullscreenButton.addEventListener(
+    "click",
+    async function () {
+
+        try {
+
+            if (
+                !document.fullscreenElement
+            ) {
+
+                await document.documentElement
+                    .requestFullscreen();
+
+            }
+
+            else {
+
+                await document
+                    .exitFullscreen();
+
+            }
+
         }
 
-    } catch (error) {
-        console.error("Fullscreen error:", error);
+        catch (error) {
+
+            console.error(
+                "Fullscreen error:",
+                error
+            );
+
+        }
+
     }
+);
 
-});
 
-
-/* SHOW CAPTION */
+/* ============================================================
+   SHOW CAPTION
+   ============================================================ */
 
 function showCaption(text) {
 
-    if (!text || !text.trim()) {
+    if (
+        !text ||
+        !text.trim()
+    ) {
+
         return;
+
     }
 
-    clearTimeout(clearTimer);
 
-    caption.textContent = text.trim();
+    clearTimeout(
+        clearTimer
+    );
 
-    caption.classList.add("visible");
+
+    caption.textContent =
+        text.trim();
+
+
+    caption.classList.add(
+        "visible"
+    );
+
 }
 
 
-/* CLEAR CAPTION */
+/* ============================================================
+   CLEAR CAPTION
+   ============================================================ */
 
 function clearCaption() {
 
-    clearTimeout(clearTimer);
+    clearTimeout(
+        clearTimer
+    );
 
-    caption.textContent = "";
+    caption.textContent =
+        "";
 
-    caption.classList.remove("visible");
+    caption.classList.remove(
+        "visible"
+    );
+
 }
 
 
-/* CLEAN TEXT */
+/* ============================================================
+   CLEAN TEXT
+   ============================================================ */
 
 function cleanText(text) {
 
     return text
-        .replace(/\s+([,.!?;:])/g, "$1")
-        .replace(/\s+/g, " ")
+
+        .replace(
+            /\s+([,.!?;:])/g,
+            "$1"
+        )
+
+        .replace(
+            /\s+/g,
+            " "
+        )
+
         .trim();
 
 }
 
 
-/* ENGLISH → THAI USING CLOUDFLARE GET */
+/* ============================================================
+   TRANSLATE ENGLISH → THAI
+   ============================================================ */
 
-async function translateToThai(text) {
+async function translateToThai(
+    text,
+    requestNumber
+) {
 
     try {
 
@@ -218,10 +500,10 @@ async function translateToThai(text) {
             "?text=" +
             encodeURIComponent(text);
 
-        console.log("Sending:", text);
 
         const response =
             await fetch(url);
+
 
         if (!response.ok) {
 
@@ -232,43 +514,130 @@ async function translateToThai(text) {
 
         }
 
+
         const data =
             await response.json();
 
-        console.log("Translation:", data);
 
-        return data.translation || null;
+        console.log(
+            "Thai:",
+            data.translation
+        );
+
+
+        /*
+         * Ignore the result if newer speech
+         * has already been recognized.
+         */
+
+        if (
+            requestNumber !==
+            translationNumber
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            currentLanguage !== "th"
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            data.translation
+        ) {
+
+            showCaption(
+                data.translation
+            );
+
+        }
 
     }
 
     catch (error) {
 
         console.error(
-            "Thai translation failed:",
+            "Thai translation error:",
             error
         );
-
-        return null;
 
     }
 
 }
 
 
-/* SPEECH RECOGNITION */
+/* ============================================================
+   SCHEDULE THAI TRANSLATION
+   ============================================================ */
+
+function scheduleThaiTranslation() {
+
+    clearTimeout(
+        translationTimer
+    );
+
+
+    translationTimer =
+        setTimeout(
+            async function () {
+
+                const text =
+                    latestSpeech;
+
+
+                if (
+                    !text ||
+                    currentLanguage !== "th"
+                ) {
+
+                    return;
+
+                }
+
+
+                const requestNumber =
+                    ++translationNumber;
+
+
+                await translateToThai(
+                    text,
+                    requestNumber
+                );
+
+            },
+            TRANSLATION_DELAY
+        );
+
+}
+
+
+/* ============================================================
+   SPEECH RECOGNITION
+   ============================================================ */
 
 const SpeechRecognition =
     window.SpeechRecognition ||
     window.webkitSpeechRecognition;
 
 
-if (!SpeechRecognition) {
+if (
+    !SpeechRecognition
+) {
 
     alert(
         "Speech recognition is not supported. Please use Google Chrome."
     );
 
-} else {
+}
+
+else {
 
 
     function startRecognition() {
@@ -276,156 +645,269 @@ if (!SpeechRecognition) {
         recognition =
             new SpeechRecognition();
 
-        recognition.continuous = true;
 
-        recognition.interimResults = true;
+        recognition.continuous =
+            true;
 
-        recognition.maxAlternatives = 1;
 
         /*
-         * YOU SPEAK ENGLISH.
-         * Chrome listens in English.
+         * IMPORTANT:
+         *
+         * TRUE means Chrome gives us
+         * unfinished/interim speech.
+         *
+         * This is what makes the system
+         * much closer to real time.
          */
 
-        recognition.lang = "en-US";
+        recognition.interimResults =
+            true;
 
+
+        recognition.maxAlternatives =
+            1;
+
+
+        /*
+         * You speak English.
+         *
+         * Therefore Chrome must listen
+         * for English.
+         */
+
+        recognition.lang =
+            "en-US";
+
+
+        /* ====================================================
+           SPEECH RESULT
+           ==================================================== */
 
         recognition.onresult =
-            async function(event) {
+            function(event) {
 
-                let finalText = "";
+
+                let interimText =
+                    "";
+
+                let finalText =
+                    "";
 
 
                 for (
-                    let i = event.resultIndex;
-                    i < event.results.length;
+                    let i =
+                        event.resultIndex;
+
+                    i <
+                        event.results.length;
+
                     i++
                 ) {
 
+
                     const result =
                         event.results[i];
+
 
                     const transcript =
                         result[0].transcript;
 
 
-                    if (result.isFinal) {
+                    if (
+                        result.isFinal
+                    ) {
 
-                        finalText += transcript;
+                        finalText +=
+                            transcript;
+
+                    }
+
+                    else {
+
+                        interimText +=
+                            transcript;
 
                     }
 
                 }
 
 
-                if (!finalText.trim()) {
-                    return;
-                }
-
-
-                const english =
-                    cleanText(finalText);
-
-
-                /* ==============================
+                /* =================================================
                    ENGLISH MODE
-                   ============================== */
+                   ================================================= */
 
-                if (currentLanguage === "en") {
+                if (
+                    currentLanguage === "en"
+                ) {
 
-                    showCaption(english);
 
-                    clearTimeout(clearTimer);
-
-                    clearTimer =
-                        setTimeout(
-                            clearCaption,
-                            CLEAR_DELAY
+                    const english =
+                        cleanText(
+                            interimText ||
+                            finalText
                         );
 
-                    return;
-                }
 
+                    if (
+                        english
+                    ) {
 
-                /* ==============================
-                   THAI MODE
-                   ============================== */
-
-                if (currentLanguage === "th") {
-
-                    const requestNumber =
-                        ++translationNumber;
-
-
-                    /*
-                     * DO NOT SHOW ENGLISH.
-                     */
-
-                    clearCaption();
-
-
-                    const thai =
-                        await translateToThai(
+                        showCaption(
                             english
                         );
 
+                    }
+
+
+                    return;
+
+                }
+
+
+                /* =================================================
+                   THAI MODE
+                   ================================================= */
+
+                if (
+                    currentLanguage === "th"
+                ) {
+
 
                     /*
-                     * SHOW ONLY THAI.
+                     * Combine the latest recognized
+                     * speech.
+                     *
+                     * Chrome's interim result is
+                     * normally the newest unfinished
+                     * portion.
                      */
 
+                    const speech =
+                        cleanText(
+                            interimText ||
+                            finalText
+                        );
+
+
                     if (
-                        thai &&
-                        currentLanguage === "th" &&
-                        requestNumber ===
-                            translationNumber
+                        !speech
                     ) {
 
-                        showCaption(thai);
-
-                        clearTimeout(clearTimer);
-
-                        clearTimer =
-                            setTimeout(
-                                clearCaption,
-                                CLEAR_DELAY
-                            );
+                        return;
 
                     }
+
+
+                    /*
+                     * Save the newest speech.
+                     */
+
+                    latestSpeech =
+                        speech;
+
+
+                    /*
+                     * Do NOT display English.
+                     *
+                     * Instead, schedule Thai
+                     * translation immediately.
+                     */
+
+                    scheduleThaiTranslation();
 
                 }
 
             };
 
 
-        recognition.onerror =
-            function(event) {
+        /* ====================================================
+           SPEECH START
+           ==================================================== */
 
-                console.log(
-                    "Speech recognition:",
-                    event.error
+        recognition.onspeechstart =
+            function () {
+
+                clearTimeout(
+                    clearTimer
                 );
 
             };
 
 
+        /* ====================================================
+           SPEECH END
+           ==================================================== */
+
+        recognition.onspeechend =
+            function () {
+
+                /*
+                 * Give the final phrase one last
+                 * translation attempt.
+                 */
+
+                if (
+                    currentLanguage === "th" &&
+                    latestSpeech
+                ) {
+
+                    scheduleThaiTranslation();
+
+                }
+
+
+                clearTimeout(
+                    clearTimer
+                );
+
+
+                clearTimer =
+                    setTimeout(
+                        function () {
+
+                            clearCaption();
+
+                        },
+                        CLEAR_DELAY
+                    );
+
+            };
+
+
+        /* ====================================================
+           RECOGNITION END
+           ==================================================== */
+
         recognition.onend =
-            function() {
+            function () {
 
-                if (!restarting) {
+                if (
+                    !restarting
+                ) {
 
-                    restarting = true;
+                    restarting =
+                        true;
+
 
                     setTimeout(
-                        function() {
+                        function () {
 
-                            restarting = false;
+                            restarting =
+                                false;
+
 
                             try {
+
                                 startRecognition();
+
                             }
+
                             catch (error) {
-                                console.error(error);
+
+                                console.error(
+                                    error
+                                );
+
                             }
 
                         },
@@ -436,6 +918,25 @@ if (!SpeechRecognition) {
 
             };
 
+
+        /* ====================================================
+           ERRORS
+           ==================================================== */
+
+        recognition.onerror =
+            function (event) {
+
+                console.log(
+                    "Speech recognition:",
+                    event.error
+                );
+
+            };
+
+
+        /* ====================================================
+           START
+           ==================================================== */
 
         try {
 
@@ -454,9 +955,17 @@ if (!SpeechRecognition) {
     }
 
 
+    /* ============================================================
+       START WHEN PAGE LOADS
+       ============================================================ */
+
     window.addEventListener(
         "load",
-        startRecognition
+        function () {
+
+            startRecognition();
+
+        }
     );
 
 }
@@ -464,4 +973,5 @@ if (!SpeechRecognition) {
 </script>
 
 </body>
+
 </html>
