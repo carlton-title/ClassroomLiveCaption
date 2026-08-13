@@ -6,6 +6,7 @@
 <title>Classroom Live Transcription</title>
 
 <style>
+
 html, body {
     margin: 0;
     padding: 0;
@@ -29,7 +30,7 @@ html, body {
     font-weight: 600;
     line-height: 1.15;
     opacity: 0;
-    transition: opacity 0.05s ease;
+    transition: none;
     overflow-wrap: break-word;
     user-select: none;
 }
@@ -73,6 +74,7 @@ html, body {
 :fullscreen #teacherMenu {
     display: none;
 }
+
 </style>
 </head>
 
@@ -123,12 +125,6 @@ const fullscreenButton =
 const TRANSLATION_SERVER =
     "https://carlton-classroom.carltonescandor.workers.dev/";
 
-/*
- * How long ONE completed speech unit
- * remains visible.
- *
- * This is NOT a silence timer.
- */
 const DISPLAY_TIME = 500;
 
 let currentLanguage = "th";
@@ -226,39 +222,30 @@ function showSpeechUnit(text) {
     clearTimeout(displayTimer);
 
     /*
-     * Remove the previous unit FIRST.
+     * Remove the previous speech unit.
      */
     caption.textContent = "";
 
     caption.classList.remove("visible");
 
     /*
-     * Then display ONLY this new unit.
+     * Display the new speech unit ONCE.
+     * No animation.
+     * No requestAnimationFrame.
+     * No blinking.
      */
-    requestAnimationFrame(function () {
+    caption.textContent = text.trim();
 
-        caption.textContent =
-            text.trim();
+    caption.classList.add("visible");
 
-        caption.classList.add("visible");
-
-        /*
-         * This unit disappears automatically.
-         *
-         * It does NOT wait for silence.
-         */
-        displayTimer =
-            setTimeout(
-                function () {
-
-                    clearCaption();
-
-                },
-                DISPLAY_TIME
-            );
-
-    });
-
+    /*
+     * Remove this speech unit automatically.
+     */
+    displayTimer =
+        setTimeout(
+            clearCaption,
+            DISPLAY_TIME
+        );
 }
 
 
@@ -306,9 +293,6 @@ function splitSpeechUnit(text) {
         return [];
     }
 
-    /*
-     * First respect punctuation.
-     */
     const sentences =
         text.match(
             /[^.!?]+[.!?]?/g
@@ -323,15 +307,6 @@ function splitSpeechUnit(text) {
                 .split(/\s+/)
                 .filter(Boolean);
 
-        /*
-         * Short statements stay together.
-         *
-         * Examples:
-         * Hello
-         * Good morning
-         * Please sit down
-         */
-
         if (words.length <= 4) {
 
             units.push(
@@ -340,11 +315,6 @@ function splitSpeechUnit(text) {
 
             continue;
         }
-
-        /*
-         * Long speech is divided into
-         * four-word units.
-         */
 
         for (
             let i = 0;
@@ -367,7 +337,7 @@ function splitSpeechUnit(text) {
 
 
 /* ============================================================
-   TRANSLATE ONE UNIT
+   TRANSLATE ENGLISH → THAI
    ============================================================ */
 
 async function translateToThai(text) {
@@ -423,7 +393,6 @@ async function translateToThai(text) {
         ) {
 
             return null;
-
         }
 
         return (
@@ -448,9 +417,7 @@ async function translateToThai(text) {
         }
 
         return null;
-
     }
-
 }
 
 
@@ -477,8 +444,8 @@ async function processSpeechUnit(text) {
         showSpeechUnit(text);
 
         return;
-
     }
+
 
     /*
      * THAI
@@ -522,7 +489,6 @@ if (!SpeechRecognition) {
 
 } else {
 
-
     function startRecognition() {
 
         recognition =
@@ -532,12 +498,8 @@ if (!SpeechRecognition) {
             true;
 
         /*
-         * IMPORTANT:
-         *
-         * We keep interim recognition enabled,
-         * but we DO NOT DISPLAY interim text.
-         *
-         * Only FINAL speech units are displayed.
+         * Interim recognition is enabled,
+         * but interim text is NEVER displayed.
          */
         recognition.interimResults =
             true;
@@ -546,30 +508,18 @@ if (!SpeechRecognition) {
             1;
 
         /*
-         * Speaker speaks English.
+         * Teacher speaks English.
          */
         recognition.lang =
             "en-US";
 
 
         /* ====================================================
-           RESULT
+           FINAL SPEECH RESULT
            ==================================================== */
 
         recognition.onresult =
             async function(event) {
-
-                /*
-                 * ONLY process finalized results.
-                 *
-                 * This prevents:
-                 *
-                 * "Hello"
-                 * "Hello good"
-                 * "Hello good morning"
-                 *
-                 * from repeatedly appearing.
-                 */
 
                 for (
                     let i =
@@ -584,12 +534,18 @@ if (!SpeechRecognition) {
                     const result =
                         event.results[i];
 
+                    /*
+                     * Ignore interim results.
+                     *
+                     * This prevents the same words
+                     * from blinking repeatedly.
+                     */
+
                     if (
                         !result.isFinal
                     ) {
 
                         continue;
-
                     }
 
                     const transcript =
@@ -603,8 +559,8 @@ if (!SpeechRecognition) {
 
 
                     /*
-                     * Break this finalized result
-                     * into independent speech units.
+                     * Divide the finalized speech
+                     * into independent display units.
                      */
 
                     const units =
@@ -613,24 +569,21 @@ if (!SpeechRecognition) {
                         );
 
 
-                    /*
-                     * Process immediately.
-                     *
-                     * No sentence accumulation.
-                     */
-
                     for (
                         const unit of units
                     ) {
 
                         /*
-                         * Stop old display.
+                         * Immediately remove whatever
+                         * was previously displayed.
                          */
+
                         clearCaption();
 
                         /*
-                         * Process this unit.
+                         * Display only this unit.
                          */
+
                         await processSpeechUnit(
                             unit
                         );
@@ -658,7 +611,7 @@ if (!SpeechRecognition) {
 
 
         /* ====================================================
-           END
+           RESTART
            ==================================================== */
 
         recognition.onend =
