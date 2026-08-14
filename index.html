@@ -129,10 +129,16 @@ const TRANSLATION_SERVER =
     "https://carlton-classroom.carltonescandor.workers.dev/";
 
 /*
- * Short phrases must disappear quickly.
- * Ordinary 2–4 word units use the same short display window.
+ * Caption display duration.
+ *
+ * 1.8 seconds gives students enough time
+ * to read each 2–4 word speech unit.
+ *
+ * This controls visibility duration only.
+ * It does NOT create transcription latency.
  */
-const DISPLAY_TIME = 450;
+const DISPLAY_TIME = 1800;
+
 
 /*
  * Small delay only when Chrome has stopped speaking,
@@ -350,35 +356,6 @@ function getWords(text) {
     return text
         .split(/\s+/)
         .filter(Boolean);
-
-}
-
-
-/* ============================================================
-   FIND SPEECH UNITS
-   ============================================================ */
-
-/*
- * The screen receives only 2–4 words at a time.
- *
- * Nothing is allowed to accumulate into a paragraph.
- */
-
-function getSpeechUnit(words) {
-
-    if (words.length < 2) {
-        return null;
-    }
-
-    /*
-     * Prefer 4 words for normal real-time flow.
-     */
-    const count =
-        Math.min(4, words.length);
-
-    return words
-        .slice(0, count)
-        .join(" ");
 
 }
 
