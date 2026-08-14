@@ -29,7 +29,7 @@ html, body {
     font-weight: 600;
     line-height: 1.15;
     opacity: 0;
-    transition: none;
+    transition: opacity 0.08s linear;
     overflow-wrap: break-word;
     user-select: none;
 }
@@ -120,10 +120,30 @@ const language =
 const fullscreenButton =
     document.getElementById("fullscreenButton");
 
+
+/* ============================================================
+   SETTINGS
+   ============================================================ */
+
 const TRANSLATION_SERVER =
     "https://carlton-classroom.carltonescandor.workers.dev/";
 
-const DISPLAY_TIME = 500;
+/*
+ * Short phrases must disappear quickly.
+ * Ordinary 2–4 word units use the same short display window.
+ */
+const DISPLAY_TIME = 450;
+
+/*
+ * Small delay only when Chrome has stopped speaking,
+ * allowing the final recognition result to arrive.
+ */
+const SPEECH_FINAL_DELAY = 100;
+
+
+/* ============================================================
+   STATE
+   ============================================================ */
 
 let currentLanguage = "en";
 
@@ -139,12 +159,28 @@ let translationID = 0;
 
 
 /*
- * This holds ONLY the current utterance.
- *
- * It is cleared when Chrome tells us
- * that the speaker has stopped speaking.
+ * Number of words already released to the screen
+ * from the current recognition stream.
  */
-let utteranceText = "";
+let emittedWordCount = 0;
+
+
+/*
+ * Prevents the same text from being displayed repeatedly.
+ */
+let lastDisplayedText = "";
+
+
+/*
+ * Used when the speaker pauses.
+ */
+let speechEndTimer = null;
+
+
+/*
+ * Prevent overlapping Thai translation requests.
+ */
+let translationQueue = Promise.resolve();
 
 
 /* ============================================================
@@ -173,13 +209,20 @@ language.addEventListener(
         currentLanguage =
             language.value;
 
-        utteranceText = "";
+        emittedWordCount = 0;
+
+        lastDisplayedText = "";
 
         translationID++;
 
         if (translationController) {
             translationController.abort();
         }
+
+        translationQueue =
+            Promise.resolve();
+
+        clearTimeout(speechEndTimer);
 
         clearCaption();
 
@@ -222,33 +265,49 @@ fullscreenButton.addEventListener(
    DISPLAY
    ============================================================ */
 
-function showSpeechUnit(text) {
+function showSpeechUnit(text, displayTime = DISPLAY_TIME) {
 
-    if (!text || !text.trim()) {
+    text =
+        cleanText(text);
+
+    if (!text) {
         return;
     }
+
+    /*
+     * Never display the exact same unit twice.
+     */
+    if (text === lastDisplayedText) {
+        return;
+    }
+
+    lastDisplayedText =
+        text;
 
     clearTimeout(displayTimer);
 
     caption.textContent =
-        text.trim();
+        text;
 
     caption.classList.add("visible");
 
-    /*
-     * The display turns OFF automatically.
-     *
-     * This timer applies to the DISPLAY,
-     * not to speech detection.
-     */
     displayTimer =
         setTimeout(
-            clearCaption,
-            DISPLAY_TIME
-        );
+            function () {
 
+                caption.textContent = "";
+
+                caption.classList.remove("visible");
+
+            },
+            displayTime
+        );
 }
 
+
+/* ============================================================
+   CLEAR
+   ============================================================ */
 
 function clearCaption() {
 
@@ -276,63 +335,89 @@ function cleanText(text) {
 
 
 /* ============================================================
-   SPLIT LONG UTTERANCE
+   WORDS
    ============================================================ */
 
-function splitSpeechUnit(text) {
+function getWords(text) {
 
-    text = cleanText(text);
+    text =
+        cleanText(text);
 
     if (!text) {
         return [];
     }
 
-    const sentences =
-        text.match(
-            /[^.!?]+[.!?]?/g
-        ) || [text];
+    return text
+        .split(/\s+/)
+        .filter(Boolean);
 
-    const units = [];
-
-    for (const sentence of sentences) {
-
-        const words =
-            cleanText(sentence)
-                .split(/\s+/)
-                .filter(Boolean);
-
-        if (words.length <= 4) {
-
-            units.push(
-                words.join(" ")
-            );
-
-        } else {
-
-            for (
-                let i = 0;
-                i < words.length;
-                i += 4
-            ) {
-
-                units.push(
-                    words
-                        .slice(i, i + 4)
-                        .join(" ")
-                );
-
-            }
-
-        }
-
-    }
-
-    return units;
 }
 
 
 /* ============================================================
-   TRANSLATION
+   FIND SPEECH UNITS
+   ============================================================ */
+
+/*
+ * The screen receives only 2–4 words at a time.
+ *
+ * Nothing is allowed to accumulate into a paragraph.
+ */
+
+function getSpeechUnit(words) {
+
+    if (words.length < 2) {
+        return null;
+    }
+
+    /*
+     * Prefer 4 words for normal real-time flow.
+     */
+    const count =
+        Math.min(4, words.length);
+
+    return words
+        .slice(0, count)
+        .join(" ");
+
+}
+
+
+/* ============================================================
+   ENGLISH REAL-TIME DISPLAY
+   ============================================================ */
+
+function processEnglishTranscript(fullText) {
+
+    const words =
+        getWords(fullText);
+
+    /*
+     * Release complete 2–4 word units immediately.
+     */
+    while (
+        words.length -
+        emittedWordCount >= 4
+    ) {
+
+        const unit =
+            words
+                .slice(
+                    emittedWordCount,
+                    emittedWordCount + 4
+                )
+                .join(" ");
+
+        emittedWordCount += 4;
+
+        showSpeechUnit(unit);
+    }
+
+}
+
+
+/* ============================================================
+   THAI TRANSLATION
    ============================================================ */
 
 async function translateToThai(text) {
@@ -417,22 +502,68 @@ async function translateToThai(text) {
 
 
 /* ============================================================
-   PROCESS COMPLETED UTTERANCE
+   THAI REAL-TIME UNIT
    ============================================================ */
 
-async function processUtterance(text) {
+function processThaiUnit(unit) {
 
-    text =
-        cleanText(text);
+    translationQueue =
+        translationQueue.then(
+            async function () {
 
-    if (!text) {
-        return;
-    }
+                if (
+                    currentLanguage !== "th"
+                ) {
+                    return;
+                }
 
-    const units =
-        splitSpeechUnit(text);
+                const thai =
+                    await translateToThai(unit);
 
-    for (const unit of units) {
+                if (
+                    thai &&
+                    currentLanguage === "th"
+                ) {
+
+                    showSpeechUnit(
+                        thai
+                    );
+
+                }
+
+            }
+        );
+}
+
+
+/* ============================================================
+   PROCESS SPEECH
+   ============================================================ */
+
+function processSpeechText(fullText) {
+
+    const words =
+        getWords(fullText);
+
+    /*
+     * Release one 4-word unit at a time.
+     *
+     * This prevents accumulation.
+     */
+    while (
+        words.length -
+        emittedWordCount >= 4
+    ) {
+
+        const unit =
+            words
+                .slice(
+                    emittedWordCount,
+                    emittedWordCount + 4
+                )
+                .join(" ");
+
+        emittedWordCount += 4;
 
         if (
             currentLanguage === "en"
@@ -446,17 +577,7 @@ async function processUtterance(text) {
             currentLanguage === "th"
         ) {
 
-            const thai =
-                await translateToThai(unit);
-
-            if (
-                thai &&
-                currentLanguage === "th"
-            ) {
-
-                showSpeechUnit(thai);
-
-            }
+            processThaiUnit(unit);
 
         }
 
@@ -492,9 +613,8 @@ if (!SpeechRecognition) {
             true;
 
         /*
-         * We need final results.
-         *
-         * Interim results are NOT displayed.
+         * Interim results are essential for
+         * low-latency live transcription.
          */
         recognition.interimResults =
             true;
@@ -511,76 +631,124 @@ if (!SpeechRecognition) {
            ==================================================== */
 
         recognition.onresult =
-            async function(event) {
+            function(event) {
+
+                clearTimeout(
+                    speechEndTimer
+                );
+
 
                 /*
-                 * IMPORTANT:
+                 * Build the CURRENT recognition text.
                  *
-                 * Chrome can split one sentence
-                 * across several FINAL results.
-                 *
-                 * We append each final piece to
-                 * the CURRENT utterance.
+                 * Chrome provides both final and
+                 * changing interim results.
                  */
-
-                let newFinalText = "";
-
+                let fullText = "";
 
                 for (
-                    let i =
-                        event.resultIndex;
-
-                    i <
-                        event.results.length;
-
+                    let i = 0;
+                    i < event.results.length;
                     i++
                 ) {
 
-                    const result =
-                        event.results[i];
+                    fullText +=
+                        " " +
+                        event.results[i][0].transcript;
 
+                }
+
+
+                fullText =
+                    cleanText(fullText);
+
+
+                if (!fullText) {
+                    return;
+                }
+
+
+                processSpeechText(
+                    fullText
+                );
+
+
+                /*
+                 * When Chrome has final results,
+                 * allow the last 1–3 words to be
+                 * displayed when the speaker pauses.
+                 */
+                let finalText = "";
+
+                for (
+                    let i = 0;
+                    i < event.results.length;
+                    i++
+                ) {
 
                     if (
-                        result.isFinal
+                        event.results[i].isFinal
                     ) {
 
-                        newFinalText +=
+                        finalText +=
                             " " +
-                            result[0].transcript;
+                            event.results[i][0].transcript;
 
                     }
 
                 }
 
 
-                newFinalText =
-                    cleanText(
-                        newFinalText
-                    );
+                finalText =
+                    cleanText(finalText);
 
 
-                if (!newFinalText) {
-                    return;
+                if (finalText) {
+
+                    /*
+                     * Process the remaining words
+                     * after the 4-word units.
+                     */
+                    const finalWords =
+                        getWords(finalText);
+
+                    const remaining =
+                        finalWords.slice(
+                            emittedWordCount
+                        );
+
+                    if (
+                        remaining.length >= 2 &&
+                        remaining.length <= 3
+                    ) {
+
+                        const unit =
+                            remaining.join(" ");
+
+                        emittedWordCount +=
+                            remaining.length;
+
+                        if (
+                            currentLanguage === "en"
+                        ) {
+
+                            showSpeechUnit(
+                                unit
+                            );
+
+                        }
+
+                        else {
+
+                            processThaiUnit(
+                                unit
+                            );
+
+                        }
+
+                    }
+
                 }
-
-
-                /*
-                 * Add it to the current utterance.
-                 */
-                utteranceText =
-                    cleanText(
-                        utteranceText +
-                        " " +
-                        newFinalText
-                    );
-
-
-                /*
-                 * DO NOT display it yet.
-                 *
-                 * Chrome may still be building
-                 * the same sentence.
-                 */
 
             };
 
@@ -590,36 +758,31 @@ if (!SpeechRecognition) {
            ==================================================== */
 
         recognition.onspeechend =
-            async function() {
+            function() {
 
                 /*
-                 * NOW the speaker has finished
-                 * this speech unit.
+                 * Give Chrome a very small amount
+                 * of time to deliver its final result.
                  *
-                 * Process the complete phrase.
+                 * This is NOT a long transcription delay.
                  */
+                clearTimeout(
+                    speechEndTimer
+                );
 
-                const completedUtterance =
-                    utteranceText;
+                speechEndTimer =
+                    setTimeout(
+                        function() {
 
+                            /*
+                             * Reset the word counter
+                             * for the NEXT speech unit.
+                             */
+                            emittedWordCount = 0;
 
-                /*
-                 * Immediately reset for the
-                 * NEXT sentence.
-                 */
-
-                utteranceText = "";
-
-
-                if (
-                    completedUtterance
-                ) {
-
-                    await processUtterance(
-                        completedUtterance
+                        },
+                        SPEECH_FINAL_DELAY
                     );
-
-                }
 
             };
 
@@ -661,7 +824,9 @@ if (!SpeechRecognition) {
 
                                 startRecognition();
 
-                            } catch (error) {
+                            }
+
+                            catch (error) {
 
                                 console.error(
                                     error
